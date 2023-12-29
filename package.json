@@ -7,7 +7,7 @@
   "homepage": "https://example.docsy.dev",
   "author": "Docsy Authors",
   "license": "Apache-2.0",
-  "bugs": "https://github.com/caelenm/redesigned-enigma/issues",
+  "bugs": "https://github.com/caelenm/caelenm.github.io/issues",
   "spelling": "cSpell:ignore HTMLTEST precheck postbuild -",
   "scripts": {
     "_build": "npm run _hugo-dev --",
