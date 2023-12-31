@@ -135,8 +135,8 @@ github_project_repo = "https://github.com/caelenm/caelenm.github.io"
 # or specify a new value if you want to reference another branch in your GitHub links
 github_branch= "main"
 
-# Google Custom Search Engine ID. Remove or comment out to disable search.
-#gcs_engine_id = "d72aa9b2712488cc3"
+# Google Custom Search Engine ID. Remove or comment out to disable search.a
+#gcs_engine_id = ""
 
 # Enable Lunr.js offline search
 offlineSearch = true

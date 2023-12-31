@@ -74,7 +74,10 @@ Based on the above considerations, you can select the appropriate types and amou
 
 If you would like to make your own activated charcoal, a video describing how can be found [here](https://www.youtube.com/watch?v=URSXs6eAguA)
 
-<img src="/home/caelen/Code/git/redesigned-enigma/content/en/OSI.png" width="480"/>
+
+![](caelenm.github.io/content/en/blog/news/OSI.png)
+<#img src="content/en/blog/news/OSI.png" width="480"/>
+
 
 Here is how the materials should be layered:
 

@@ -51,20 +51,3 @@ battery storage for residential solar photovoltaic systems – a review and a si
 Renewable and Sustainable Energy Reviews. [ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/S1364032114005206)
 {{% /blocks/section %}}
 
-{{% blocks/section %}}
-
-# How to get involved
-{.text-center}
-- Share the ecoScotia website with friends and family
-- Share your projects on Social media
-- Contribute to the Docs on [Github](https://github.com/caelenm/caelenm.github.io)
-- Send an email suggesting a topic or detailing a project to [ecoscotia@tuta.io](mailto:ecoscotia@tuta.io)
-- Make a fork and host your own copy. [ecoScotia uses the Apache 2.0 license](https://apache.org/licenses/LICENSE-2.0.txt)
-- Donate with cryptocurrency
-    - Bitcoin: bc1qvavyzhf5nnwxc6wrelf86upt9h4zzcwc8c4uzc
-    - Monero xmr: 48Er7iCtZCXiWDK5jp8QwuWRqUGRunkd5Qn7jnc1J2mHi6DpfsBjymQe47og3bGE5CNqsv4zumvcLBBV1woWPDY9GM5AjxM
-    - Coinbase wallet: [ecoscotia.cb.id](https://profile.coinbase.com/ecoscotia.cb.id)
-
-
-
-{{% /blocks/section %}}
