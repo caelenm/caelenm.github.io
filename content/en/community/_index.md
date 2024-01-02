@@ -13,7 +13,8 @@ menu: {main: {weight: 40}}
 - Share your projects on Social media
 - Contribute to the Docs on [Github](https://github.com/caelenm/caelenm.github.io)
 - Send an email suggesting a topic or detailing a project to [ecoscotia@tuta.io](mailto:ecoscotia@tuta.io)
-- Make a fork and host your own copy. [ecoScotia uses the Apache 2.0 license](https://apache.org/licenses/LICENSE-2.0.txt)
+- purchase an item through one of our affiliate links
+- Add our RSS feed to your RSS reader so you never miss a post
 - Donate with cryptocurrency
     - Bitcoin: <code>bc1qvavyzhf5nnwxc6wrelf86upt9h4zzcwc8c4uzc</code>
     - Monero xmr: <code>48Er7iCtZCXiWDK5jp8QwuWRqUGRunkd5Qn7jnc1J2mHi6DpfsBjymQe47og3bGE5CNqsv4zumvcLBBV1woWPDY9GM5AjxM</code>
