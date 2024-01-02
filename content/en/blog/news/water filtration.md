@@ -11,21 +11,20 @@ Creating a water filtration system using plastic buckets, sand, charcoal, and ot
 
 To build a basic water filtration system using plastic buckets, sand, charcoal, and other materials, you will need the following items:
 
-* Two or more plastic buckets with lids (5-10 gallons in size)
-* Tape measure or ruler
-* Drill with various drill bits
-* Sand (activated or regular)
-* Charcoal (activated or regular)
+* Two or more <a target="_blank" href="https://www.amazon.ca/SeaChoice-Gallon-Plastic-Bucket-90120/dp/B002IZFOGK/ref=sr_1_20?keywords=food+safe+plastic+bucket+5+gallon&amp;sr=8-20&_encoding=UTF8&tag=ecoscotia-20&linkCode=ur2&linkId=fe9d5ce49a146062285afbe5b9024863&camp=15121&creative=330641">5-Gallon Plastic Buckets</a> with lids
+
+* Sand (coarse and fine)
+* Charcoal (activated)
 * Gravel or pebbles (small and cleaned)
+* Cloth such as cotton or cheesecloth (to separate layers)
 * Water source (tap, well, river, etc.)
 
 ### Tools
 
 To build a water filtration system using plastic buckets, sand, charcoal, and other materials, you will need the following tools:
 
-* Tape measure or ruler
-* Drill with various drill bits
-* Sandpaper (optional)
+* <a target="_blank" href="https://www.amazon.ca/CRAFTSMAN-Tape-Measure-Compact-CMHT37443S/dp/B0BVXXLP3T/ref=sr_1_11?crid=5LO4M8OOEVF9&amp;keywords=tape+measure&amp;qid=1704071514&amp;sprefix=tape+measure%252Caps%252C129&amp;sr=8-11&_encoding=UTF8&tag=ecoscotia-20&linkCode=ur2&linkId=d0445a833208442d3393286b0a9e8803&camp=15121&creative=330641">Tape Measure</a> or ruler
+* <a target="_blank" href="https://www.amazon.ca/DEWALT-DCD701-DCD701B-Brushless-Cordless/dp/B07TWK3MX5/ref=sr_1_17?crid=2LDQO4WH6SDIJ&amp;keywords=dewalt+drill&amp;qid=1704071861&amp;sprefix=dewalt+drill%252Caps%252C118&amp;sr=8-17&_encoding=UTF8&tag=ecoscotia-20&linkCode=ur2&linkId=0359a4713e256d79cfc026383f6b70cc&camp=15121&creative=330641">Drill</a> with various <a target="_blank" href="https://www.amazon.ca/DEWALT-DW1163-Black-Assortment-13-Piece/dp/B00004RGVF/ref=sr_1_4?crid=KQMYDBS0HW6M&amp;keywords=dewalt%252Bdrill%252Bbits&amp;qid=1704071727&amp;sprefix=dewalt%252Bdrill%252Bbits%252Caps%252C116&amp;sr=8-4&amp;th=1&_encoding=UTF8&tag=ecoscotia-20&linkCode=ur2&linkId=67d61e53fb72dcf8dabbc5490635c9bb&camp=15121&creative=330641">Drill bits</a>
 
 ### Instructions
 
@@ -39,10 +38,10 @@ Before you can start building your water filtration system using plastic buckets
 
 1. Clean your plastic buckets thoroughly using soap and warm water. Rinse them well and let them dry completely before proceeding.
 2. Once your plastic buckets are clean and dry, inspect them for any cracks, chips, or other signs of damage. If you find any issues, repair them as needed before continuing with your project.
-3. Before using your plastic buckets to build your water filtration system, mark the inside of each bucket at a height that is approximately equal to the diameter of the opening at the bottom of each bucket. This will help ensure that the filter media inside each bucket are evenly distributed and that water flows through them efficiently and effectively.
+3. Ensure filtration media (pebbles, sand) are clean and sterilized if possible. This can be accomplished in a variety of ways such as rinsing with clean water, boiling for 10 minutes, baking until dry over a fire in a pan, and leaving in a thin layer out the sun - using UV light for sterilization 
 
 #### Step 3: Drill Holes in Your Plastic Buckets
-To build your water filtration system using plastic buckets, sand, charcoal, and other materials, you need to drill holes in the bottom of each plastic bucket to allow water to flow through them and be filtered as it passes through the various filter media inside each bucket. To do this, follow the steps below:
+To build your water filtration system using plastic buckets, sand, charcoal, and other materials, you need to drill holes in the bottom of each plastic bucket to allow water to flow through them and be filtered as it passes through the various filtration media inside each bucket. To do this, follow the steps below:
 
 1. Before drilling holes in the bottom of each plastic bucket for your water filtration system, make sure that you have all of the necessary tools and materials on hand. This will help ensure that your project runs smoothly and efficiently.
 2. To drill holes in the bottom of each plastic bucket for your water filtration system, follow these steps:
@@ -53,39 +52,33 @@ To build your water filtration system using plastic buckets, sand, charcoal, and
 
    c. With the drill positioning and setup complete, carefully apply steady, even pressure on the handle of the drill to initiate the drilling process. As the drill bit begins to penetrate the plastic material, you may notice a slight resistance or vibration from the drill as it works to create a clean, smooth hole in the bottom of the plastic bucket.
 
-   d. To ensure that the hole you are drilling in the bottom of the plastic bucket is centered and symmetrical, regularly check your progress by periodically lifting the plastic bucket off the drill platform or tabletop and inspecting the bottom of the bucket to see how the hole is developing. If necessary, adjust the positioning of the drill bit or the angle and orientation of the drill as it penetrates the plastic material to create a clean, smooth hole in the bottom of the plastic bucket.
-
-   e. Once you have successfully drilled a clean, smooth hole in the bottom of the plastic bucket for your water filtration system, carefully remove any burrs, rough edges, or other imperfections that may be present around the circumference of the hole to ensure that the filter media inside the bucket will sit evenly and securely on top of the hole without shifting, settling, or migrating out of position while the water is being filtered through the various layers of filter media inside the bucket.
-
 #### Step 4: Add Filter Media to Your Water Filtration System
 To build a simple water filtration system using plastic buckets, sand, charcoal, and other materials, you need to add the appropriate types and amounts of filter media to each bucket in your water filtration system to ensure that the water is effectively filtered as it passes through the various layers of filter media inside each bucket.
 
-To determine the appropriate types and amounts of filter media to use in your water filtration system, you need to consider several factors such as:
+Before using your filter you need to consider several factors such as:
 
 * The source of the water that will be passing through your water filtration system (e.g., well water, city water, rainwater, etc.)
 * The specific contaminants or impurities that are present in the water and that need to be removed or reduced through the use of appropriate filter media in your water filtration system.
 * The physical and chemical properties of the various types of filter media that are available for use in water filtration systems, including their porosity, particle size distribution, specific surface area, filter capacity, flow rate, and other relevant factors.
 
-Based on the above considerations, you can select the appropriate types and amounts of filter media to use in your water filtration system. Some common types of filter media that are commonly used in water filtration systems include:
-
-* Gravel or crushed stone (typically size 1-2 inches) for providing a coarse mechanical barrier for trapping larger debris, sediment, and suspended solids in the water as it passes through the gravel or crushed stone filter media.
-* Sand (typically size 0.5-1 mm) for providing a fine mechanical barrier for trapping smaller sediments, suspended solids, and dissolved impurities in the water as it passes through the sand filter media.
-* Activated carbon or charcoal
 
 If you would like to make your own activated charcoal, a video describing how can be found [here](https://www.youtube.com/watch?v=URSXs6eAguA)
 
 
-![](caelenm.github.io/content/en/blog/news/OSI.png)
-<#img src="content/en/blog/news/OSI.png" width="480"/>
 
+<img src="../../../../news/images/two-5-gallon-white-plastic-buckets-stacked-neatly-on-top-of-each-other-with-water-pouring-into-the-top,-neutral-product-background.jpeg" alt="" width="480">
+
+<p style="margin-bottom: 50px;"></p>
 
 Here is how the materials should be layered:
 
 |  |
 |----------------|
-|Pebbles|
-|Cheesecloth|
-| Activated Charcoal|
-| Coarse Sand |
-|Fine Sand  |
-| Cheesecloth|
+| Pebbles |
+| Cloth |
+| Coarse sand |
+|cloth |
+| Fine Sand |
+|Activated charcoal|
+| Cloth |
+|Empty receiving container|
