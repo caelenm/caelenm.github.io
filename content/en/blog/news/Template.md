@@ -1,6 +1,6 @@
 ---
 title: Template Post
-date: 2019-12-22
+date: 0
 weight: 0
 description: >
   
