@@ -8,7 +8,7 @@ This article has been verified <i class="fas fa-check"></i><p style="margin-bott
 This article follows the guidelines of the Canadian Red Cross, If you would like to learn more, please [click here](https://www.redcross.ca/how-we-help/emergencies-and-disasters-in-canada/be-ready-emergency-preparedness-and-recovery/get-an-emergency-kit)
 
 <div style="text-align:center">
-    <img src="../../../../news/images/camping-emergency-kit-bag-container-+.jpeg" alt="" width="480">
+    <img src="../../../../news/images/emergencyKit.jpg" alt="This image is in the Public Domain" width="480">
 </div>  
 <p style="margin-bottom: 40px;"></p>
 In today's world, it is essential to prepare for emergencies. The Canadian Red Cross has compiled an extensive list of items that should be included in your emergency kit. In this article, we will explore how you can create an emergency kit on a budget using the Canadian Red Cross list.
