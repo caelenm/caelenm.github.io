@@ -43,6 +43,7 @@ Purchasing used furniture reduces the demand for new resources and the environme
 ## Buy Used Electronics
 
 Buying used electronics conserves the limited resources like lithium used in batteries and reduces the environmental impact of manufacturing new devices. Plus, many used electronics are in excellent condition, offering the same functionality at a lower cost. 
+
 ---
 
 Embracing these sustainable practices can make a significant difference in environmental conservation. As students, we have the power to drive change through our everyday choices. Let's make decisions that are beneficial for both our planet and our pockets.
