@@ -1,5 +1,5 @@
 ---
-title: Budget Emergency Kit - Essential and Additional Items for Preparedness
+title: Budget Emergency Kit - Essential Items for Preparedness
 date: 2024-01-02
 description: >
 ---
