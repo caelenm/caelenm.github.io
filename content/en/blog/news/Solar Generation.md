@@ -122,8 +122,8 @@ Considering these pros and cons can help homeowners make an informed decision ab
 
 
 
-{{% pageinfo %}}
+<!--{{% pageinfo %}}
 This site is currently under construction <i class="fa-solid fa-code"></i>
 {{% /pageinfo %}}
 
-Parts 3 will be here shortly...
+Parts 3 will be here shortly...-->
