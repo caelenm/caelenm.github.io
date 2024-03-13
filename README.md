@@ -15,9 +15,9 @@ Contribution Guidlines:
 - Contributors should fork the repository and submit pull requests for review by project maintainers for any proposed changes.
 - All pull requests must pass automated tests and reviews by maintainers before being merged into the project.
 - Document any dependencies or external libraries used, including licenses and justifications for their inclusion.
+  
 contact ecoscotia@tuta.io for more info
-
-* Site owner means the person who administrates the domain, ecoscotia.ca *
+Site owner means the person who administrates the domain, ecoscotia.ca *
 
 Technical stuff:
 -------------------------
