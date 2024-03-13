@@ -1,7 +1,23 @@
 # ecoScotia
 
-Usage guidelines to be added here
-contact ecoscotia@tuta.io for info
+
+Contribution Guidlines:
+------------------------
+- Ensure all submitted content is related to sustainable and self-sufficient projects.
+- Attribute all content to their appropriate authors.
+- All content must be approved by the site owner and can be changed, deleted, modified, or removed at any time, without warning.
+- You may not request for donations or money transfers of any kind unless approved by the site owner.
+- Use clear and concise language for documentation and commit messages to facilitate understanding and collaboration.
+- Report any bugs or issues through the designated channels, providing detailed information to support resolution.
+- Respect copyright and intellectual property rights, ensuring all contributions are properly licensed and attributed.
+- Engage with the community constructively, offering feedback, suggestions, and support where possible.
+- Maintain the confidentiality of any sensitive information encountered during project participation.
+- Contributors should fork the repository and submit pull requests for review by project maintainers for any proposed changes.
+- All pull requests must pass automated tests and reviews by maintainers before being merged into the project.
+- Document any dependencies or external libraries used, including licenses and justifications for their inclusion.
+  
+- contact ecoscotia@tuta.io for more info.
+- *Site owner means the person who administrates the domain, ecoscotia.ca *
 
 Technical stuff:
 -------------------------
