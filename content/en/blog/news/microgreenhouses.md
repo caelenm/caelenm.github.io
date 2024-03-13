@@ -36,7 +36,7 @@ description: >
 
 # Why build a micro greenhouse?
 
-Greenhouses provide many benefits from extending your crops lifecycle, to protecting them from pests and animals. Building your own micro greenhouse is an excellent learning experience for those interested in gardening or sustainable living practices. It offers the opportunity to customize the greenhouse to fit specific needs and space constraints. Moreover, constructing a micro greenhouse can be a cost-effective alternative to purchasing a pre-built one. Using readily available materials and basic tools, you can create the perfect growing environment for your plants.
+Greenhouses provide many benefits from extending your crop's lifecycle, to protecting them from pests and animals. Building your own micro greenhouse is an excellent learning experience for those interested in gardening or sustainable living practices. It offers the opportunity to customize the greenhouse to fit specific needs and space constraints. Moreover, constructing a micro greenhouse can be a cost-effective alternative to purchasing a pre-built one. Using readily available materials and basic tools, you can create the perfect growing environment for your plants.
 
 <!DOCTYPE html>
 <html lang="en">
@@ -103,7 +103,7 @@ Greenhouses provide many benefits from extending your crops lifecycle, to protec
 ### Instructions:
 1. Plan your design. The link above will take you to a few example designs you are free to use for personal use. You can draw inspiration from our designs, or come up with your own!  Think about where you want to put the greenhouse and how much space you will need. Find the angles you will need to cut in the wood given the side lengths. Here is a useful [online trig calculator](https://www.omnicalculator.com/math/trigonometry). Everyone will have different needs for exact dimensions because of space constraints. We found the simplest and most effective design was a top-loading greenhouse with a shed roof (Top left and bottom right images), while the greenhouse with pentagonal sides was harder to calculate the angles for. The main angle you have to calulate for the former is the height difference between the top-back, where the hinges connect, and the front.
 
-2. Collect Necessary materials and tools in a clean and safe workspace, preferably in a shed, garage, or somewhere well ventialted. The wood for this project can be aquired from old shipping pallettes which are often free to take at some hardware stores. The flat deckboards on the pallette make a great floor for the greenhouse as can be seen in the images above. These are a couple greenhouses we produced when undertaking this project. 
+2. Collect Necessary materials and tools in a clean and safe workspace, preferably in a shed, garage, or somewhere well ventilated. The wood for this project can be aquired from old shipping pallettes which are often free to take at some hardware stores. The flat deckboards on the pallette make a great floor for the greenhouse as can be seen in the images above. These are a couple greenhouses we produced when undertaking this project. 
 
 
 
@@ -113,7 +113,7 @@ Greenhouses provide many benefits from extending your crops lifecycle, to protec
 - 4 floor joists
 - roof (rectangular) -> 4 sides
 
-4. Connect the pieces individually using screws. Do not use nails for this as the corner connections will end up bending and twisting. It is okay to use nails only for attaching the floor boards to the floor joists. The order you choose to put these pieces together depend on your design but you should think of each wall as a panel. Once you make the font and back panels, you can connect them to eachother with two side pieces, then set the floor inside on the bottom. 
+4. Connect the pieces individually using screws. Do not use nails for this as the corner connections will end up bending and twisting. It is okay to use nails only for attaching the floor boards to the floor joists. The order you choose to put these pieces together depend on your design. Thinking of each wall as a panel can help with this. Once you make the front and back panels, you can connect them to eachother with two side pieces, then set the floor inside on the bottom. 
 
 5. Attach the plastic sheeting to the outside of the greenhouse with the stapler. If you can find a way to wrap the plastic all the way around the greenhouse in one go, then do so. If not, cut a square for each "panel", making sure you leave enough room on the edges for stapling. Remember, you can always trim some plastic from the edges later. If you want to make it extra insulated, make two layers, one on the inside and one on the outside. This will act as a double wall trapping more heat.
 
