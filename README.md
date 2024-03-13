@@ -16,8 +16,8 @@ Contribution Guidlines:
 - All pull requests must pass automated tests and reviews by maintainers before being merged into the project.
 - Document any dependencies or external libraries used, including licenses and justifications for their inclusion.
   
--contact ecoscotia@tuta.io for more info
--Site owner means the person who administrates the domain, ecoscotia.ca *
+- contact ecoscotia@tuta.io for more info.
+- *Site owner means the person who administrates the domain, ecoscotia.ca *
 
 Technical stuff:
 -------------------------
