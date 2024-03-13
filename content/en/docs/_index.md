@@ -40,6 +40,20 @@ Here you can find recommended products, books, videos, and other resources.
 </div>
 </div>
 
+
+<div style="display: flex; align-items: flex-start;">
+<img src="
+https://m.media-amazon.com/images/I/61G0x98-lbL._SL1500_.jpg
+" style="width: 150px; height: 150px; margin-right: 20px;" alt="Scary Smart Book Cover"/>
+<div>
+<h2>Scary Smart: The Future of Artificial Intelligence and How You Can Save Our World</h2>
+<p>In <a href="https://amzn.to/49PhDud" target="_blank" rel="noopener noreferrer">Scary Smart</a>, Mo Gawdat, the internationally bestselling author of <em>Solve for Happy</em>, explores the future of Artificial Intelligence and its impact on the world. Drawing from over thirty years' experience in technology and his time as the chief business officer of Google [X], Gawdat discusses how AI's intelligence, capable of processing information at unparalleled speeds and predicting future outcomes, still frequently gets it wrong due to its human-designed algorithms reflecting our imperfect world. <em>Scary Smart</em> offers a compelling blueprint for correcting our course with AI, ensuring that by 2049, when AI is predicted to be a billion times more intelligent than humans, it will preserve rather than endanger our species.</p>
+</div>
+</div>
+
+
+
+
 ## Websites
 <div style="display: flex; align-items: flex-start;">
 
@@ -54,6 +68,6 @@ Here you can find recommended products, books, videos, and other resources.
 
 </div>
 
-## Videos
+
 
 

@@ -62,7 +62,6 @@ https://ca.ecoflow.com/cdn/shop/files/220WBifacial_d6b9542b-d052-43cf-8b6a-eadf1
 A solar generator system consists of a portable solar panel and a power station (large battery). Companies 
 such as Bluetti, EcoFlow, and Jackery are known for making good quality power stations. Some power stations can output up to 3600Wh. This is enough to power a modern appliances such as refrigerators and electric grills. This amount of power could be very useful when travelling (e.g. RV-ing) or in a power outage situation. The addition of a solar panel drastically increases the usability of this product, as it allows you to be fully untethered from the grid. Depending on the size of the solar panel, it could take anywhere from a few hours to a few days to fully charge the battery. 
 
-A solar generator system, consisting of a portable solar panel and a large-capacity power station, offers several advantages over traditional handheld batteries. Notable companies in this space include Bluetti, EcoFlow, and Jackery, which are known for their quality power stations capable of outputting up to 3600Wh. This level of power is sufficient for running modern appliances such as refrigerators and electric grills, showcasing the system's utility in various scenarios. However, there are also some drawbacks to consider:
 
 ### Pros
 
@@ -103,7 +102,7 @@ Given the likely future increase in energy prices, home solar installations may 
 - **Low Maintenance**: Once installed, solar systems require minimal upkeep, mainly involving occasional cleaning and inspections.
 - **Financial Incentives**: Rebate programs at both provincial and federal levels can substantially offset the initial cost.
 - **Increased Property Value**: Homes with solar energy systems can sell at a higher value, reflecting the desirability of reduced utility costs.
-- **Environmental Impact**: Solar energy is clean, renewable, and reduces your carbon footprint, contributing to the fight against climate change.
+- **Environmental Impact**: Solar energy is clean, renewable, and reduces your energy consumption
 - **Energy Independence**: Reduces reliance on the grid, offering protection against rising energy prices and supply disruptions.
 - **Longevity**: With lifespans averaging around 20 years, solar panels are a long-term investment.
 
