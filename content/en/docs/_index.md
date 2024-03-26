@@ -82,7 +82,20 @@ https://m.media-amazon.com/images/I/61G0x98-lbL._SL1500_.jpg
 
 
 
-## Websites
+## Online Resources
+
+
+<div style="display: flex; align-items: flex-start;">
+<img src="
+https://ice-us-sfo-56268.icedrive.io/download?p=Q3Y7zO1byHKbp_6dk4z8vEqRyqpENQbxcmjFJ9ADXLZyfbKX.Fs_aPPsvq_sblNDmBjLz4mM7cg_Q3VOp2bce80.2DDVdSJVnm9P_qATL6__wVazO4xVVpibzqO7Zcjw0cR9WHYch7k5xazi2d.EKbN17TiILa7hLXBCVd5WiHPm9pfTzXqRRKmtc13tindi4qTBABxf5efBCEQmGEaEs93YZ1hBH.ld1sbMd96lrnY-
+" style="width: 200px; height: 150px; margin-right: 20px;" alt="ecoScotia AI img"/>
+<div>
+<h2>Check out ecoscotia's AI chat bot! (Requires ChatGPT +)</h2>
+<p>With this link: <a href="https://chat.openai.com/g/g-FLgsv7bdT-ecoscotia-ai" target="_blank" rel="noopener noreferrer">HERE</a>, you can talk to ecoScotia AI, a specialized assistant designed to offer advice and resources for enhancing sustainability and saving money in Antigonish, Nova Scotia. Dive into a wealth of information on local environmental projects, practical sustainability tips, and guides on making eco-friendly choices that also benefit your wallet. Visit ecoscotia.ca for comprehensive support on your journey towards a greener lifestyle.</p>
+</div>
+</div>
+
+
 <div style="display: flex; align-items: flex-start;">
 
  <img src="https://www.pngall.com/wp-content/uploads/2017/05/Save-Energy-PNG-Image.png" style="width: 150px; height: 150px; margin-right: 20px;" alt="Efficiency Nova Scotia">
