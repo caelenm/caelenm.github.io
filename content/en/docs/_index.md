@@ -15,6 +15,25 @@ Here you can find recommended products, books, videos, and other resources.
 ## Recommended Products:
 
 <div style="display: flex; align-items: flex-start;">
+<img src="https://m.media-amazon.com/images/I/61Br0iAUHGL._AC_SL1500_.jpg" style="width: 150px; height: 150px; margin-right: 20px;" alt="
+Kicking Horse Coffee - Grizzly Claw Blend, Ground 100% Arabica Coffee Dark Roast All Organic & Fairtrade 284 g"/>
+<div>
+<h2>
+Kicking Horse Coffee - Grizzly Claw Blend, Ground 100% Arabica Coffee Dark Roast All Organic & Fairtrade 284 g</h2>
+<p>Awaken your senses with the bold flavors of <a href="https://www.amazon.ca/Kicking-Horse-Coffee-Grizzly-Ground/dp/B00M31BP12?crid=187CF255LVPS4&dib=eyJ2IjoiMSJ9.Mkfv-HpWEr_CIpVhhSniFmkWwtdzAEV1bFONnVaa2xK-OU3WUZOtYssDQ37TxVFMezxknalpY7z0irFel6SH-RDpdAc-b1upl-epdcRGzPjiryrS6sP7WdfHeOQx3IJim6XS3vTfPWGe8r0iBh6Zd9dYP6xDgvXzGNPJpJamlMMTPUG3Fxjtzb74kTuylaYvFCGzIdftTjmFqzts1Rnl7kYGIem7sIH88kAVXpF1WWOBkjimNHg27xafay-opE0SPGzEM9R1rScqY6WuchtwqFG0c98BgoDz_vag_0n8O9Y.SlFP6Rur_FwBshtOyimL8gE-hpNJTKXicyo4EAoefnc&dib_tag=se&keywords=kicking%2Bhorse%2Bground&qid=1711415452&rdc=1&sprefix=kicking%2Bhorseground%2Caps%2C261&sr=8-1&th=1&linkCode=ll1&tag=ecoscotia-20&linkId=552ed2dc27e6d302c1bc9a673d3efbaf&language=en_CA&ref_=as_li_ss_tl" target="_blank" rel="noopener noreferrer"> Kicking Horse Coffee Grizzly Claw, Ground Coffee</a>. Known for its deep, dark roast with hints of chocolate and a smooth finish, this coffee is crafted for those who love a rich, invigorating cup. Sourced from organic, fair trade beans, Grizzly Claw delivers not only exceptional taste but also a commitment to ethical sourcing. Perfect for kick-starting your morning or fueling late-night projects, this coffee is a must-try for connoisseurs seeking full-bodied and rich flavor with each brew.
+
+
+
+
+
+</p>
+</div>
+</div>
+
+
+
+
+<div style="display: flex; align-items: flex-start;">
 <img src="https://levoit.com/cdn/shop/products/vital-100s-smart-true-hepa-air-purifier-295620.jpg?v=1706049812&width=768" style="width: 150px; height: 150px; margin-right: 20px;" alt="Recommended Product Image" alt="Recommended Product Image"/>
 <div>
 <h2>Levoit Air Purifier</h2>
@@ -32,6 +51,15 @@ Here you can find recommended products, books, videos, and other resources.
 </div>
 
 ## Recommended books
+<div style="display: flex; align-items: flex-start;">
+<img src="https://m.media-amazon.com/images/I/71-bsESNsKL._SL1200_.jpg" style="width: 150px; height: 150px; margin-right: 20px;" alt="Bernardin Complete Book of Home Preserving"/>
+<div>
+<h2>Bernardin Complete Book of Home Preserving</h2>
+<p>Dive into the art of home preserving with the <a href="https://www.amazon.ca/Bernardin-Complete-Book-Home-Preserving/dp/0778801373?crid=34OP83ZZRWA3J&dib=eyJ2IjoiMSJ9.6sVdTKTGplgQItSXt1R145MLQl2qzSxPtuKZngsQtAL_NExc8LXEggO6Mu7oJoiNGaoaeI1axoL1BI8de0KF6yyA5MiACXtoLL_w0QOw3F1-64-oMS1PspKV8SES2GpdgNEG-kIyHRFHAEUTFPGGVSRm76m2ADBB_ZhJvHsm5z-BeJxrSgrTh-gmuXZpIs_ib0a4LEmLjObrz_zw0MnnFrcf876ipEui2pyd2f8AMGm6PhQ5GdvmyVhTiURf-5fa3hxagZGl7MxMemkjhwQIpf7xgeOaRkVjepLMBibCOa4.7xM_k7Xlmq8NvtKf2NOY51mgs-VCm_8qKAUmBCU4bJ0&dib_tag=se&keywords=pressure+canning+book&qid=1711414576&sprefix=pressure+canning+book%2Caps%2C212&sr=8-7&linkCode=ll1&tag=ecoscotia-20&linkId=700eb586d520d173972b7bbebbe37628&language=en_CA&ref_=as_li_ss_tl" target="_blank" rel="noopener noreferrer">Bernardin Complete Book of Home Preserving</a>. This updated edition, a staple in home canning, offers over 400 recipes from jams and jellies to salsas and sauces, reflecting modern trends in low sugar and fermentation. Bernardin, a leading name in home preserving supplies, provides essential guidance on safe canning methods, equipment, and tips for both beginners and seasoned pros. This comprehensive guide, having sold over a million copies, is a must-have for crafting delicious, creative preserves.</p>
+</div>
+</div>
+
+
 <div style="display: flex; align-items: flex-start;">
 <img src="https://m.media-amazon.com/images/I/71ccpZJ9ZBL._SL1500_.jpg" style="width: 150px; height: 150px; margin-right: 20px;" alt="SAS Survival Handbook"/>
 <div>
