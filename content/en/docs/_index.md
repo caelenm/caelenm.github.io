@@ -86,7 +86,8 @@ https://m.media-amazon.com/images/I/61G0x98-lbL._SL1500_.jpg
 
 
 <div style="display: flex; align-items: flex-start;">
-<img src="../../../../news/images/bot.png" style="width: 200px; height: 150px; margin-right: 20px;" alt="ecoScotia AI img"/>
+<!--To fix: could not get bot img to reference absolute path, using https request currently-->
+<img src="https://ecoscotia.ca/blog/news/images/bot.png" style="width: 200px; height: 150px; margin-right: 20px;" alt="ecoScotia AI img"/>
 <div>
 <h2>Check out ecoscotia's AI chat bot! (Requires ChatGPT +)</h2>
 <p>With this link: <a href="https://chat.openai.com/g/g-FLgsv7bdT-ecoscotia-ai" target="_blank" rel="noopener noreferrer">HERE</a>, you can talk to ecoScotia AI, a specialized assistant designed to offer advice and resources for enhancing sustainability and saving money in Antigonish, Nova Scotia. Dive into a wealth of information on local environmental projects, practical sustainability tips, and guides on making eco-friendly choices that also benefit your wallet. Visit ecoscotia.ca for comprehensive support on your journey towards a greener lifestyle</p>
