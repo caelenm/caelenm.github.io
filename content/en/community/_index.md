@@ -16,7 +16,7 @@ menu: {main: {weight: 40}}
 - purchase an item through one of our affiliate links
 - Add our RSS feed to your RSS reader so you never miss a post
 - Donate with cryptocurrency
-    - Bitcoin: <code>bc1qvavyzhf5nnwxc6wrelf86upt9h4zzcwc8c4uzc</code>
+    - Bitcoin: <code>bc1q5jpzq6j92eye6d00nmqz0evaec7xtjqsytg4yr</code>
     - Monero xmr: <code>48Er7iCtZCXiWDK5jp8QwuWRqUGRunkd5Qn7jnc1J2mHi6DpfsBjymQe47og3bGE5CNqsv4zumvcLBBV1woWPDY9GM5AjxM</code>
     - Coinbase wallet: [ecoscotia.cb.id](https://profile.coinbase.com/ecoscotia.cb.id)
 
