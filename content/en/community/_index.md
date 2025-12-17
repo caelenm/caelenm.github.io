@@ -7,7 +7,7 @@ menu: {main: {weight: 40}}
 
 {{% blocks/section %}}
 
-# How to get involved
+# How to get involved (testing)
 {.text-center}
 - Share the ecoScotia website with friends and family
 - Share your projects on Social media
