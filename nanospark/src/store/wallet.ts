@@ -15,10 +15,19 @@ import {
 } from "@buildonspark/spark-sdk";
 import * as db from "../lib/db";
 import type { CachedActivity, Contact, ContactKind, LeafLayout, NetworkName, Settings, StableMode } from "../lib/db";
-import { createVault, openVault, deriveKey, sealString, VAULT_VERSION } from "../lib/crypto";
+import {
+  createVault,
+  openVault,
+  deriveKey,
+  sealString,
+  vaultNeedsUpgrade,
+  KDF_PARAMS,
+  VAULT_VERSION,
+} from "../lib/crypto";
 import { checkStorage, type StorageHealth } from "../lib/storage";
 import { readableError } from "../lib/format";
 import {
+  DEFAULT_SLIPPAGE_BPS,
   convertToBitcoin,
   convertToStable,
   executeRebalance,
@@ -248,10 +257,21 @@ export const selectExitLocked = (s: State) => exitActive(s);
 
 function describeConversion(r: ConvertResult, direction: SwapDirection, amountIn: bigint): string | null {
   switch (r.status) {
-    case "converted":
-      return direction === "toStable"
-        ? `Converted ${r.amountIn.toLocaleString("en-US")} sats to ${formatUsd(r.amountOut)}.`
-        : `Converted ${formatUsd(r.amountIn)} to ${r.amountOut.toLocaleString("en-US")} sats.`;
+    case "converted": {
+      const done =
+        direction === "toStable"
+          ? `Converted ${r.amountIn.toLocaleString("en-US")} sats to ${formatUsd(r.amountOut)}.`
+          : `Converted ${formatUsd(r.amountIn)} to ${r.amountOut.toLocaleString("en-US")} sats.`;
+      if (r.change === undefined) return done;
+      // Too small to swap on its own, so it stays put. Naming it "change" says
+      // the remainder is expected, rather than leaving the user to wonder why
+      // the balance did not reach zero.
+      const change =
+        direction === "toStable"
+          ? `${r.change.toLocaleString("en-US")} sats`
+          : formatUsd(r.change);
+      return `${done} ${change} remains as change — below the smallest amount that can be converted.`;
+    }
     case "skipped":
       if (r.reason === "nothing") return null;
       if (r.reason === "below-minimum") {
@@ -339,7 +359,29 @@ export const useWallet = create<State & Actions>((set, get) => ({
     const opened = await openVault(vault, passphrase, (p) => set({ kdfProgress: p }));
     set({ kdfProgress: 0 });
     if (!opened) return false;
-    await attach(set, get, opened.mnemonic, opened.key);
+
+    // The vault opens under whatever parameters it was written with. If those
+    // are not the current ones, re-seal it now that the passphrase is in hand —
+    // this is the only moment it can be done without asking the user again.
+    let key = opened.key;
+    if (vaultNeedsUpgrade(vault)) {
+      try {
+        const upgraded = await createVault(passphrase, opened.mnemonic, (p) =>
+          set({ kdfProgress: p }),
+        );
+        // Contacts and any exit in progress are sealed with the old key.
+        await db.resealAll(opened.key, upgraded.key);
+        await db.saveVault(upgraded.vault);
+        await db.clearActivityCache().catch(() => {});
+        key = upgraded.key;
+      } catch {
+        // An upgrade that fails must not cost the user their unlock; the vault
+        // on disk is untouched and will be retried next time.
+      }
+      set({ kdfProgress: 0 });
+    }
+
+    await attach(set, get, opened.mnemonic, key);
     return true;
   },
 
@@ -427,14 +469,17 @@ export const useWallet = create<State & Actions>((set, get) => ({
     // New salt as well as a new key — reusing the salt would leak that the
     // passphrase changed without changing the derivation.
     const salt = crypto.getRandomValues(new Uint8Array(16));
-    const key = await deriveKey(next, salt, (p) => set({ kdfProgress: p }));
+    const kdf = { ...KDF_PARAMS, salt };
+    const key = await deriveKey(next, kdf, (p) => set({ kdfProgress: p }));
 
     // Contacts, an exit in progress and captured exit leaves must all survive:
     // re-seal them under the new key before the vault moves to it.
     await db.resealAll(opened.key, key);
 
     const { iv, ct } = await sealString(key, opened.mnemonic);
-    await db.saveVault({ v: VAULT_VERSION, kdf: { ...vault.kdf, salt }, iv, ct });
+    // The current parameters, not the outgoing vault's: `key` above was derived
+    // with these, and recording anything else makes the vault unopenable.
+    await db.saveVault({ v: VAULT_VERSION, kdf, iv, ct });
 
     // The activity cache was sealed with the old key; it is only a cache.
     await db.clearActivityCache().catch(() => {});
@@ -517,7 +562,7 @@ export const useWallet = create<State & Actions>((set, get) => ({
     set({ stableBusy: true });
     try {
       const p = await swapProvider(s.wallet, s.settings.network);
-      const r = await convertToStable(p, amount);
+      const r = await convertToStable(p, amount, DEFAULT_SLIPPAGE_BPS, BigInt(s.balance.available));
       set({ stableNote: describeConversion(r, "toStable", amount) });
       if (r.status === "converted") await get().refresh();
       return r;
@@ -536,7 +581,7 @@ export const useWallet = create<State & Actions>((set, get) => ({
     set({ stableBusy: true });
     try {
       const p = await swapProvider(s.wallet, s.settings.network);
-      const r = await convertToBitcoin(p, units);
+      const r = await convertToBitcoin(p, units, DEFAULT_SLIPPAGE_BPS, s.usdbUnits);
       set({ stableNote: describeConversion(r, "toBitcoin", units) });
       if (r.status === "converted") await get().refresh();
       return r;

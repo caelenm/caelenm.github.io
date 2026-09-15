@@ -4,6 +4,7 @@
  * Run with: node --experimental-strip-types src/lib/stable.test.ts
  */
 import {
+  DEFAULT_SLIPPAGE_BPS,
   StableError,
   convertToBitcoin,
   convertToStable,
@@ -259,6 +260,69 @@ check(
   const r = await executeRebalance(provider, planRebalance("btc", 4_000n, current), current);
   check("an exact-input rebalance swaps exactly the difference", calls.find((c) => c.kind === "swap")?.amountIn, 6_000n);
   check("and reports its direction", r.direction, "toStable");
+}
+
+// --- change: the sub-minimum remainder a swap has to leave behind --------------
+
+{
+  // $1.28 held, $1.00 swapped to bitcoin. The $0.28 left is under the $0.50
+  // minimum, so it cannot be swapped on its own — that is change.
+  const { provider } = mockProvider();
+  const r = await convertToBitcoin(provider, 1_000_000n, DEFAULT_SLIPPAGE_BPS, 1_280_000n);
+  check("the swap still reports converted", r.status, "converted");
+  check("the sub-minimum remainder is reported as change", r.status === "converted" ? r.change : undefined, 280_000n);
+  check("and it formats the way the user sees it", formatUsd(280_000n), "$0.28");
+}
+
+{
+  // Same swap, but $2.28 held: the $1.28 left over is above the minimum, so it
+  // is a balance the user still has, not change.
+  const { provider } = mockProvider();
+  const r = await convertToBitcoin(provider, 1_000_000n, DEFAULT_SLIPPAGE_BPS, 2_280_000n);
+  check("a convertible remainder is not change", r.status === "converted" ? r.change : "n/a", undefined);
+}
+
+{
+  // Converting the whole balance leaves nothing at all.
+  const { provider } = mockProvider();
+  const r = await convertToBitcoin(provider, 1_000_000n, DEFAULT_SLIPPAGE_BPS, 1_000_000n);
+  check("an exact-balance swap reports no change", r.status === "converted" ? r.change : "n/a", undefined);
+}
+
+{
+  // Without a known balance there is nothing to compare against.
+  const { provider } = mockProvider();
+  const r = await convertToBitcoin(provider, 1_000_000n);
+  check("change is omitted when the balance is unknown", r.status === "converted" ? r.change : "n/a", undefined);
+}
+
+{
+  // The same rule going the other way: sats below the 800-sat minimum.
+  const { provider } = mockProvider();
+  const r = await convertToStable(provider, 5_000n, DEFAULT_SLIPPAGE_BPS, 5_700n);
+  check("a sats remainder under the minimum is change too", r.status === "converted" ? r.change : undefined, 700n);
+}
+
+{
+  // An exact-out rebalance takes only what the target needs; the crumb it
+  // cannot take is change.
+  const { provider } = mockProvider();
+  const current = { sats: 0n, usdbUnits: 1_300_000n };
+  const plan = planRebalance("btc", 1_000n, current);
+  check("the plan is exact-out toBitcoin", plan.kind === "exact-out" ? plan.direction : plan.kind, "toBitcoin");
+  const r = await executeRebalance(provider, plan, current);
+  check("the rebalance converts", r.status, "converted");
+  const spent = r.status === "converted" ? r.amountIn : 0n;
+  check("it leaves a sub-minimum crumb as change", r.status === "converted" ? r.change : undefined, current.usdbUnits - spent);
+}
+
+{
+  // A deliberate partial rebalance is not change, however small the swap.
+  const { provider } = mockProvider();
+  const current = { sats: 0n, usdbUnits: 10_000_000n };
+  const plan = planRebalance("usd", 8_000_000n, current);
+  const r = await executeRebalance(provider, plan, current);
+  check("a deliberate remainder is not reported as change", r.status === "converted" ? r.change : "n/a", undefined);
 }
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);

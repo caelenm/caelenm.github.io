@@ -4,6 +4,7 @@ import { EntropyGrid } from "../components/EntropyGrid";
 import { useWallet } from "../store/wallet";
 import { Spinner } from "../components/ui";
 import { Restore } from "./Restore";
+import { MIN_PASSPHRASE_LENGTH, WEAK_PASSPHRASE_LENGTH } from "../lib/crypto";
 
 type Step = "choose" | "warn" | "entropy" | "passphrase" | "restore";
 
@@ -129,9 +130,10 @@ export function PassphraseStep({
   const [err, setErr] = useState<string | null>(null);
   const progress = useWallet((s) => s.kdfProgress);
 
-  const tooShort = a.length > 0 && a.length < 8;
+  const tooShort = a.length > 0 && a.length < MIN_PASSPHRASE_LENGTH;
+  const weak = a.length >= MIN_PASSPHRASE_LENGTH && a.length < WEAK_PASSPHRASE_LENGTH;
   const mismatch = b.length > 0 && a !== b;
-  const ready = a.length >= 8 && a === b && !busy;
+  const ready = a.length >= MIN_PASSPHRASE_LENGTH && a === b && !busy;
 
   return (
     <div style={{ paddingTop: 24 }}>
@@ -139,7 +141,7 @@ export function PassphraseStep({
       <p className="muted">{blurb}</p>
 
       <label className="field" style={{ marginTop: 20 }}>
-        <span>Passphrase (8 characters minimum)</span>
+        <span>Passphrase ({MIN_PASSPHRASE_LENGTH} characters minimum)</span>
         <input type="password" value={a} autoComplete="new-password" onChange={(e) => setA(e.target.value)} />
       </label>
       <label className="field">
@@ -155,7 +157,15 @@ export function PassphraseStep({
         />
       </label>
 
-      {tooShort && <div className="err">A little longer, please — at least 8 characters.</div>}
+      {tooShort && (
+        <div className="err">A little longer, please — at least {MIN_PASSPHRASE_LENGTH} characters.</div>
+      )}
+      {weak && (
+        <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+          That is short enough to be guessed by someone who copies this device's storage and tries
+          every combination offline. It is allowed — a longer passphrase is safer.
+        </div>
+      )}
       {mismatch && <div className="err">Those do not match.</div>}
       {err && <div className="err">{err}</div>}
 

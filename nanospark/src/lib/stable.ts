@@ -81,9 +81,32 @@ export function withSlippage(amountOut: bigint, bps: number = DEFAULT_SLIPPAGE_B
 }
 
 export type ConvertResult =
-  | { status: "converted"; amountIn: bigint; amountOut: bigint }
+  | {
+      status: "converted";
+      amountIn: bigint;
+      amountOut: bigint;
+      /**
+       * Input-asset balance left behind because it is below the AMM's minimum,
+       * i.e. change. Only set when the remainder is too small to convert — a
+       * remainder the user deliberately kept back (a partial rebalance) is not
+       * change and is left undefined.
+       */
+      change?: bigint;
+    }
   | { status: "skipped"; reason: "nothing" | "below-minimum" | "quote-failed"; detail?: string }
   | { status: "failed"; error: string };
+
+/**
+ * The part of `available` that cannot follow `amountIn` through the swap.
+ *
+ * Returns undefined when nothing is left over, or when what is left is large
+ * enough to convert on its own — that is a balance, not change.
+ */
+function changeLeftBy(available: bigint | undefined, amountIn: bigint, minimum: bigint): bigint | undefined {
+  if (available === undefined) return undefined;
+  const leftover = available - amountIn;
+  return leftover > 0n && leftover < minimum ? leftover : undefined;
+}
 
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -94,6 +117,8 @@ async function convert(
   direction: SwapDirection,
   amountIn: bigint,
   bps: number,
+  /** Total input-asset balance, when known, so any unconvertible remainder can be reported as change. */
+  available?: bigint,
 ): Promise<ConvertResult> {
   if (amountIn <= 0n) return { status: "skipped", reason: "nothing" };
 
@@ -116,7 +141,8 @@ async function convert(
 
   try {
     const r = await provider.swap(direction, amountIn, withSlippage(quoted, bps));
-    return { status: "converted", amountIn, amountOut: r.amountOut };
+    const change = changeLeftBy(available, amountIn, minimum);
+    return { status: "converted", amountIn, amountOut: r.amountOut, ...(change === undefined ? {} : { change }) };
   } catch (e) {
     return { status: "failed", error: message(e) };
   }
@@ -130,12 +156,22 @@ async function convert(
  * minimum, or that cannot be quoted, is left as bitcoin rather than attempted.
  * It never throws.
  */
-export function convertToStable(provider: SwapProvider, sats: bigint, bps = DEFAULT_SLIPPAGE_BPS) {
-  return convert(provider, "toStable", sats, bps);
+export function convertToStable(
+  provider: SwapProvider,
+  sats: bigint,
+  bps = DEFAULT_SLIPPAGE_BPS,
+  availableSats?: bigint,
+) {
+  return convert(provider, "toStable", sats, bps, availableSats);
 }
 
-export function convertToBitcoin(provider: SwapProvider, usdbUnits: bigint, bps = DEFAULT_SLIPPAGE_BPS) {
-  return convert(provider, "toBitcoin", usdbUnits, bps);
+export function convertToBitcoin(
+  provider: SwapProvider,
+  usdbUnits: bigint,
+  bps = DEFAULT_SLIPPAGE_BPS,
+  availableUnits?: bigint,
+) {
+  return convert(provider, "toBitcoin", usdbUnits, bps, availableUnits);
 }
 
 /**
@@ -249,7 +285,11 @@ export async function executeRebalance(
 ): Promise<ConvertResult & { direction?: SwapDirection }> {
   if (plan.kind === "none") return { status: "skipped", reason: "nothing" };
   if (plan.kind === "exact-in") {
-    return { ...(await convert(provider, plan.direction, plan.amountIn, bps)), direction: plan.direction };
+    const held = plan.direction === "toBitcoin" ? current.usdbUnits : current.sats;
+    return {
+      ...(await convert(provider, plan.direction, plan.amountIn, bps, held)),
+      direction: plan.direction,
+    };
   }
   const available = plan.direction === "toBitcoin" ? current.usdbUnits : current.sats;
   let found: { amountIn: bigint; minOut: bigint };
@@ -260,7 +300,24 @@ export async function executeRebalance(
   }
   try {
     const r = await provider.swap(plan.direction, found.amountIn, found.minOut);
-    return { status: "converted", amountIn: found.amountIn, amountOut: r.amountOut, direction: plan.direction };
+    // An exact-out swap takes only what the target needed; whatever is left is
+    // change only if it is too small to convert on its own.
+    let change: bigint | undefined;
+    try {
+      const m = await provider.minimums();
+      const minimum = plan.direction === "toBitcoin" ? m.usdbUnits : m.btcSats;
+      change = changeLeftBy(available, found.amountIn, minimum);
+    } catch {
+      // The swap already succeeded; not being able to name the leftover is not
+      // a reason to report the conversion as failed.
+    }
+    return {
+      status: "converted",
+      amountIn: found.amountIn,
+      amountOut: r.amountOut,
+      ...(change === undefined ? {} : { change }),
+      direction: plan.direction,
+    };
   } catch (e) {
     return { status: "failed", error: message(e), direction: plan.direction };
   }

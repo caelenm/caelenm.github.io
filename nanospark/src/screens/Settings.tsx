@@ -5,6 +5,7 @@ import { Exit } from "./Exit";
 import { PROVENANCE } from "./Backup";
 import { formatSats } from "../lib/format";
 import { formatUsd, stableSupported } from "../lib/stable";
+import { MIN_PASSPHRASE_LENGTH } from "../lib/crypto";
 import type { LeafLayout, StableMode } from "../lib/db";
 
 type View = "root" | "seed" | "passphrase" | "exit" | "stable" | "layout";
@@ -598,7 +599,7 @@ function ChangePassphrase({ onDone }: { onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const ready = current && next.length >= 8 && next === confirm && !busy;
+  const ready = current && next.length >= MIN_PASSPHRASE_LENGTH && next === confirm && !busy;
 
   return (
     <Sheet title="Change passphrase" onClose={onDone}>
@@ -607,7 +608,7 @@ function ChangePassphrase({ onDone }: { onDone: () => void }) {
         <input type="password" value={current} autoComplete="current-password" onChange={(e) => setCurrent(e.target.value)} />
       </label>
       <label className="field">
-        <span>New passphrase (8 characters minimum)</span>
+        <span>New passphrase ({MIN_PASSPHRASE_LENGTH} characters minimum)</span>
         <input type="password" value={next} autoComplete="new-password" onChange={(e) => setNext(e.target.value)} />
       </label>
       <label className="field">
