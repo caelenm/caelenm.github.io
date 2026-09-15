@@ -33,11 +33,44 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
+      # nanospark is a Vite app whose source lives in nanospark/. Its build
+      # output is no longer committed, so it is built here and staged over the
+      # source directory. Everything else in the repo is still published as-is.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: nanospark/package-lock.json
+      - name: Install nanospark dependencies
+        working-directory: nanospark
+        run: npm ci
+      - name: Test nanospark
+        working-directory: nanospark
+        run: npm test
+      - name: Build nanospark
+        working-directory: nanospark
+        run: npm run build
+
+      - name: Stage site
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          # Copy the repository, minus build inputs and the staging dir itself.
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '_site' \
+            --exclude 'node_modules' \
+            ./ _site/
+          # Replace nanospark's source tree with its built output.
+          rm -rf _site/nanospark
+          cp -r nanospark/dist _site/nanospark
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: '_site'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

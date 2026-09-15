@@ -12,7 +12,9 @@ import {
   mnemonicToEntropy,
   validateMnemonic as bip39Validate,
 } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english.js";
+// No ".js" suffix: @scure/bip39 v1 (the major the Spark SDK pins, and so the
+// only copy in the tree) exports this subpath unsuffixed.
+import { wordlist } from "@scure/bip39/wordlists/english";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { hmac } from "@noble/hashes/hmac.js";
 

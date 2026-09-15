@@ -58,14 +58,21 @@
         Content-Security-Policy: frame-ancestors 'none'
     -->
     <style id="frame-guard">html{display:none!important}</style>
-    <script src="./frame-guard.js"></script>
+    <script src="/frame-guard.js"></script>
 
-    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="manifest" href="./manifest.webmanifest" />
+    <!--
+      Absolute (public-dir) paths, not "./…". A relative href makes Vite treat
+      these as build inputs and emit hashed copies under assets/, which breaks
+      the PWA icon: manifest.webmanifest points at "./icon.svg" relative to
+      itself, and there is no icon.svg inside assets/. Referenced this way they
+      are copied verbatim to the site root, and `base: "./"` rewrites them back
+      to "./icon.svg" in the built HTML.
+    -->
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>nanospark</title>
-    <script type="module" crossorigin src="./assets/index-3ijXXSsJ.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BmJdcRe4.css">
+    <script type="module" src="/src/main.tsx"></script>
   </head>
   <body>
     <div id="root"></div>
