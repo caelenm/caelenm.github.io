@@ -4,7 +4,8 @@ import { Confirm, Sheet, Spinner } from "../components/ui";
 import { Scanner } from "../components/Scanner";
 import { Cooperative } from "./Exit";
 import { detect, describeDestination, type Destination } from "../lib/detect";
-import { isExpired } from "../lib/bolt11";
+import { decodeInvoice, isExpired } from "../lib/bolt11";
+import { classifySend } from "../lib/lightning";
 import { LnurlError, requestInvoice, resolvePayParams, type PayParams } from "../lib/lnurl";
 import { formatSats, readableError, truncateMiddle } from "../lib/format";
 import { StableError, formatUsd } from "../lib/stable";
@@ -14,7 +15,9 @@ import type { Contact, ContactKind } from "../lib/db";
 const feeCeiling = (estimate: number) => Math.max(estimate + 2, Math.ceil(estimate * 1.5), 5);
 
 type Plan = {
-  target: { kind: "bolt11"; invoice: string } | { kind: "spark"; address: string };
+  target:
+    | { kind: "bolt11"; invoice: string; paymentHash?: string }
+    | { kind: "spark"; address: string };
   amountSats: number;
   maxFeeSats: number;
   label: string;
@@ -30,6 +33,8 @@ type Stage =
   | { s: "confirm"; plan: Plan }
   | { s: "paying" }
   | { s: "done"; amountSats: number }
+  /** Dispatched, but delivery to the receiver is not proven yet. */
+  | { s: "settling"; amountSats: number; status: string }
   /** `afterAttempt` marks failures where a payment was actually dispatched, so
    *  the "check Activity first" warning only appears when it is true. */
   | { s: "error"; message: string; afterAttempt?: boolean };
@@ -136,13 +141,16 @@ export function Send({ onClose }: { onClose: () => void }) {
 
   async function prepareBolt11(invoice: string, amountSats: number, label?: string) {
     if (!wallet) return;
+    // Decoded here, from the invoice the user is paying — the preimage check
+    // is only meaningful against a hash the response did not supply.
+    const paymentHash = decodeInvoice(invoice)?.paymentHash;
     setStage({ s: "preparing" });
     try {
       const estimate = await estimateLightningFee(invoice, amountSats);
       setStage({
         s: "confirm",
         plan: {
-          target: { kind: "bolt11", invoice },
+          target: { kind: "bolt11", invoice, ...(paymentHash ? { paymentHash } : {}) },
           amountSats,
           maxFeeSats: feeCeiling(estimate),
           label: label || "Lightning invoice",
@@ -158,24 +166,46 @@ export function Send({ onClose }: { onClose: () => void }) {
     if (!wallet) return;
     setStage({ s: "paying" });
     try {
+      // Whatever the send returns is the only evidence of what happened to the
+      // money; it is classified rather than discarded.
+      let outcome: ReturnType<typeof classifySend> | null = null;
       await withStableCover(
         plan.amountSats + plan.maxFeeSats,
         async () => {
           if (plan.target.kind === "bolt11") {
-            await wallet.payLightningInvoice({
+            const result = await wallet.payLightningInvoice({
               invoice: plan.target.invoice,
               maxFeeSats: plan.maxFeeSats,
             });
+            outcome = classifySend(result, plan.target.paymentHash);
+            // A send that is over and undelivered must not read as success. It
+            // throws so the stable-cover wrapper can unwind with it.
+            if (outcome.state === "failed") {
+              throw new Error(
+                outcome.refunded
+                  ? "The Lightning payment did not go through, and the sats have been returned."
+                  : "The Lightning payment did not reach the receiver.",
+              );
+            }
           } else {
-            await wallet.transfer({
+            const result = await wallet.transfer({
               receiverSparkAddress: plan.target.address,
               amountSats: plan.amountSats,
             });
+            outcome = classifySend(result);
           }
         },
         { allow: stableCover },
       );
-      setStage({ s: "done", amountSats: plan.amountSats });
+
+      // "in-flight" is not "done": the leaves have gone to the SSP but nobody
+      // has proved the receiver was paid, so say exactly that instead.
+      const settled = outcome as ReturnType<typeof classifySend> | null;
+      setStage(
+        settled && settled.state === "in-flight"
+          ? { s: "settling", amountSats: plan.amountSats, status: settled.status }
+          : { s: "done", amountSats: plan.amountSats },
+      );
       void refresh();
     } catch (e) {
       setStage({ s: "error", message: explain(e), afterAttempt: true });
@@ -409,6 +439,21 @@ export function Send({ onClose }: { onClose: () => void }) {
           <p className="muted">{formatSats(stage.amountSats)} sats on their way.</p>
           <button className="btn primary" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>
             Done
+          </button>
+        </div>
+      )}
+
+      {stage.s === "settling" && (
+        <div className="center">
+          <Spinner />
+          <h2 style={{ marginTop: 14 }}>Still settling</h2>
+          <p className="muted">
+            {formatSats(stage.amountSats)} sats have left this wallet, but the receiver has not
+            confirmed yet. This usually resolves in a few seconds. Activity will show it as paid
+            once it does — and if it does not go through, the sats come back.
+          </p>
+          <button className="btn primary" style={{ width: "100%", marginTop: 16 }} onClick={onClose}>
+            Close
           </button>
         </div>
       )}
