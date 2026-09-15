@@ -14,6 +14,9 @@ import type { Contact, ContactKind } from "../lib/db";
 /** Headroom over the SDK's estimate, so a small routing surprise doesn't fail the payment. */
 const feeCeiling = (estimate: number) => Math.max(estimate + 2, Math.ceil(estimate * 1.5), 5);
 
+/** The BOLT11 network name each wallet network expects to be paying on. */
+const INVOICE_NETWORK = { MAINNET: "mainnet", REGTEST: "regtest" } as const;
+
 type Plan = {
   target:
     | { kind: "bolt11"; invoice: string; paymentHash?: string }
@@ -143,7 +146,24 @@ export function Send({ onClose }: { onClose: () => void }) {
     if (!wallet) return;
     // Decoded here, from the invoice the user is paying — the preimage check
     // is only meaningful against a hash the response did not supply.
-    const paymentHash = decodeInvoice(invoice)?.paymentHash;
+    const decoded = decodeInvoice(invoice);
+    const paymentHash = decoded?.paymentHash;
+
+    // Every invoice reaches the confirm screen through this function — pasted,
+    // pasted with an amount, or returned by an LNURL server — so the checks
+    // that must not be skippable belong here rather than at the paste site.
+    if (decoded && decoded.network !== INVOICE_NETWORK[network]) {
+      setStage({
+        s: "error",
+        message: `That is a ${decoded.network} invoice, but this wallet is on ${INVOICE_NETWORK[network]}.`,
+      });
+      return;
+    }
+    if (decoded && isExpired(decoded)) {
+      setStage({ s: "error", message: "That invoice has expired. Ask for a new one." });
+      return;
+    }
+
     setStage({ s: "preparing" });
     try {
       const estimate = await estimateLightningFee(invoice, amountSats);

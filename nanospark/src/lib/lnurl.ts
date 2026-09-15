@@ -40,16 +40,31 @@ function assertSafeUrl(u: URL): void {
     throw new LnurlError("Only https endpoints are allowed.");
   }
   const h = u.hostname.toLowerCase();
-  const isPrivate =
-    h === "localhost" ||
-    h.endsWith(".localhost") ||
+
+  // Alternate IPv4 spellings (2130706433, 0x7f000001, 0177.0.0.1) do not need
+  // handling here: the URL parser has already normalised them to dotted quads.
+  const privateV4 =
     h === "0.0.0.0" ||
     /^127\./.test(h) ||
     /^10\./.test(h) ||
     /^192\.168\./.test(h) ||
     /^169\.254\./.test(h) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-    h === "[::1]";
+    /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+
+  // IPv6 arrives bracketed and compressed. ::1 is loopback, fc00::/7 is
+  // unique-local and fe80::/10 link-local. ::ffff:x.x.x.x embeds an IPv4
+  // address, which the parser renders in hex ([::ffff:7f00:1] for 127.0.0.1),
+  // so the v4 patterns above would never have matched it.
+  const v6 = h.startsWith("[") && h.endsWith("]") ? h.slice(1, -1) : null;
+  const privateV6 =
+    v6 !== null &&
+    (v6 === "::1" ||
+      v6 === "::" ||
+      /^f[cd][0-9a-f]{0,2}:/.test(v6) ||
+      /^fe[89ab][0-9a-f]?:/.test(v6) ||
+      v6.startsWith("::ffff:"));
+
+  const isPrivate = h === "localhost" || h.endsWith(".localhost") || privateV4 || privateV6;
   if (isPrivate) throw new LnurlError("Refusing to contact a private address.");
 }
 

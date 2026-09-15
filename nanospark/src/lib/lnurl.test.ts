@@ -20,6 +20,28 @@ function check(label: string, actual: unknown, expected: unknown) {
   console.log(`${ok ? "ok  " : "FAIL"} ${label}${ok ? "" : `  got ${JSON.stringify(actual)} want ${JSON.stringify(expected)}`}`);
 }
 
+/**
+ * Asserts the host was refused *because it is private*, not merely that
+ * something threw.
+ *
+ * `rejects` below is too weak for these: an unreachable host also raises
+ * LnurlError ("Could not reach the recipient's server"), so a check for the
+ * type alone would still pass with the private-address guard deleted. Matching
+ * the refusal message is what makes these tests mean anything — and it also
+ * proves no request was ever attempted.
+ */
+async function refusesPrivate(label: string, url: string) {
+  try {
+    await resolvePayParams(url.includes("@") ? url : makeLnurl(url));
+    failures++;
+    console.log(`FAIL ${label}  (did not throw)`);
+  } catch (e) {
+    const ok = e instanceof LnurlError && /Refusing to contact a private address/.test(e.message);
+    if (!ok) failures++;
+    console.log(`${ok ? "ok  " : "FAIL"} ${label}${ok ? "" : `  threw ${e}`}`);
+  }
+}
+
 async function rejects(label: string, fn: () => Promise<unknown>, expectLnurlError = true) {
   try {
     await fn();
@@ -99,14 +121,30 @@ check(
 );
 
 await rejects("refuses plain http", () => resolvePayParams(makeLnurl("http://example.com/pay")));
-await rejects("refuses localhost via LNURL", () => resolvePayParams(makeLnurl("https://localhost/pay")));
-await rejects("refuses loopback IP", () => resolvePayParams(makeLnurl("https://127.0.0.1/pay")));
-await rejects("refuses RFC1918 10.x", () => resolvePayParams(makeLnurl("https://10.0.0.5/pay")));
-await rejects("refuses RFC1918 192.168.x", () => resolvePayParams(makeLnurl("https://192.168.1.1/pay")));
-await rejects("refuses RFC1918 172.16.x", () => resolvePayParams(makeLnurl("https://172.16.0.1/pay")));
-await rejects("refuses link-local 169.254.x", () => resolvePayParams(makeLnurl("https://169.254.169.254/pay")));
+await refusesPrivate("refuses localhost via LNURL", "https://localhost/pay");
+await refusesPrivate("refuses loopback IP", "https://127.0.0.1/pay");
+await refusesPrivate("refuses RFC1918 10.x", "https://10.0.0.5/pay");
+await refusesPrivate("refuses RFC1918 192.168.x", "https://192.168.1.1/pay");
+await refusesPrivate("refuses RFC1918 172.16.x", "https://172.16.0.1/pay");
+await refusesPrivate("refuses link-local 169.254.x", "https://169.254.169.254/pay");
 await rejects("refuses file: scheme", () => resolvePayParams(makeLnurl("file:///etc/passwd")));
 await rejects("refuses localhost address", () => resolvePayParams("alice@localhost"));
+
+// Alternate IPv4 spellings. The URL parser normalises these to dotted quads
+// before the host check ever sees them, but that is worth pinning down.
+await refusesPrivate("refuses decimal-encoded loopback", "https://2130706433/pay");
+await refusesPrivate("refuses hex-encoded loopback", "https://0x7f000001/pay");
+await refusesPrivate("refuses octal-encoded loopback", "https://017700000001/pay");
+
+// IPv6. These are not reachable by the IPv4 patterns: an embedded IPv4 address
+// is re-rendered in hex ([::ffff:127.0.0.1] becomes [::ffff:7f00:1]).
+await refusesPrivate("refuses IPv6 loopback", "https://[::1]/pay");
+await refusesPrivate("refuses IPv6 unspecified", "https://[::]/pay");
+await refusesPrivate("refuses IPv4-mapped loopback", "https://[::ffff:127.0.0.1]/pay");
+await refusesPrivate("refuses IPv4-mapped RFC1918", "https://[::ffff:10.0.0.1]/pay");
+await refusesPrivate("refuses IPv6 unique-local fd00::/8", "https://[fd00::1]/pay");
+await refusesPrivate("refuses IPv6 unique-local fc00::/8", "https://[fc00::1]/pay");
+await refusesPrivate("refuses IPv6 link-local fe80::/10", "https://[fe80::1]/pay");
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);
