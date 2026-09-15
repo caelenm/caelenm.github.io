@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.vite/
+*.local
+.DS_Store
+
+# Recovery sheets are generated client-side into the user's downloads; if one
+# ever lands in the working tree it must not be committed.
+*recovery-sheet*.txt
+*unilateral-exit*.txt
