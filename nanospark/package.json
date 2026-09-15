@@ -1,0 +1,40 @@
+{
+  "name": "nanospark",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A self-custodial Bitcoin Lightning wallet on Spark. Static, no backend.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/run-tests.mjs",
+    "regtest": "node --experimental-strip-types scripts/regtest-e2e.ts"
+  },
+  "dependencies": {
+    "@buildonspark/spark-sdk": "^0.12.0",
+    "@flashnet/sdk": "^0.5.10",
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.8.0",
+    "@scure/base": "^1.2.6",
+    "@scure/bip32": "^1.7.0",
+    "@scure/bip39": "^1.6.0",
+    "@scure/btc-signer": "^1.8.1",
+    "@zxing/browser": "^0.2.1",
+    "hash-wasm": "^4.12.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.0",
+    "vite-plugin-wasm": "^3.6.0"
+  }
+}

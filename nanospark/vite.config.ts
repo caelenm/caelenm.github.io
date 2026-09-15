@@ -1,6 +1,20 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import wasm from "vite-plugin-wasm";
+
+// The production CSP pins script-src to 'self', which the dev server cannot
+// satisfy: HMR and the React refresh preamble are injected inline and talk over
+// a websocket. Rather than loosen the policy that ships, drop the meta tag for
+// `vite dev` only. `vite build` and `vite preview` keep it verbatim.
+function stripCspInDev(): Plugin {
+  return {
+    name: "nanospark:strip-csp-in-dev",
+    apply: "serve",
+    transformIndexHtml(html) {
+      return html.replace(/\s*<meta\s+http-equiv="Content-Security-Policy"[\s\S]*?\/>/i, "");
+    },
+  };
+}
 
 // The Spark SDK signs locally with a WASM FROST signer. Webpack cannot resolve
 // its WASM URL (see README), so this project is Vite-only.
@@ -11,7 +25,7 @@ import wasm from "vite-plugin-wasm";
 // the alternative the plugin exists to provide.
 export default defineConfig({
   base: "./", // relative paths, so a build also runs from file:// or a subpath
-  plugins: [react(), wasm()],
+  plugins: [react(), wasm(), stripCspInDev()],
   build: {
     target: "esnext",
     sourcemap: false,
