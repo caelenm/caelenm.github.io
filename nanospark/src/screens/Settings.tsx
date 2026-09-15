@@ -131,6 +131,52 @@ export function Settings({ onClose, onShowBackup }: { onClose: () => void; onSho
       </div>
 
       <div className="card">
+        <div className="kv" style={{ alignItems: "center", paddingTop: 12 }}>
+          <span className="k">
+            <span style={{ color: "var(--text)" }}>Claim on-chain deposits automatically</span>
+            <div style={{ fontSize: 12 }}>
+              {settings.autoClaimDeposits
+                ? `On, while the SSP fee is ${formatSats(settings.autoClaimMaxFeeSats)} sats or less`
+                : "Off — every deposit waits for you to claim it"}
+            </div>
+          </span>
+          <span className="v">
+            <input
+              type="checkbox"
+              className="switch"
+              aria-label="Claim on-chain deposits automatically"
+              checked={settings.autoClaimDeposits}
+              onChange={(e) => void updateSettings({ autoClaimDeposits: e.target.checked })}
+            />
+          </span>
+        </div>
+
+        {settings.autoClaimDeposits && (
+          <label className="field" style={{ marginBottom: 6 }}>
+            <span>Most you will pay the SSP, in sats</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={settings.autoClaimMaxFeeSats}
+              onChange={(e) => {
+                const n = Math.max(0, Math.floor(Number(e.target.value)));
+                if (Number.isFinite(n)) void updateSettings({ autoClaimMaxFeeSats: n });
+              }}
+            />
+          </label>
+        )}
+
+        <p className="muted" style={{ fontSize: 12.5, padding: "0 0 14px" }}>
+          A deposit priced above the ceiling is left alone for you to look at, so a fee spike never
+          spends your money unattended. This is offered because an unclaimed deposit is{" "}
+          <strong>not</strong> recoverable from your recovery phrase alone — until it is claimed the
+          bitcoin sits at an address built from your key and the operators' together, so claiming
+          (or refunding) needs them either way.
+        </p>
+      </div>
+
+      <div className="card">
         <label className="field" style={{ marginBottom: 6, paddingTop: 12 }}>
           <span>Network</span>
           <select

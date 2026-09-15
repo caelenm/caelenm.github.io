@@ -54,7 +54,8 @@ import {
   type LeafProgress,
 } from "../lib/unilateral";
 import { captureFromNodes, planExit, signBundle, type ExitBundle, type ExitCapture, type ExitPlan } from "../lib/exitBundle";
-import { depositOutput } from "../lib/deposits";
+import { DEPOSIT_CONFIRMATIONS, depositOutput } from "../lib/deposits";
+import { autoClaimable } from "../lib/activity";
 
 export type Phase = "boot" | "welcome" | "locked" | "unlocked";
 
@@ -82,15 +83,24 @@ export interface ExitState {
   capture: ExitCapture | null;
 }
 
+export type ClaimResult = { ok: true; creditedSats: number } | { ok: false; error: string };
+
 /** A payment to the static deposit address that has not been claimed yet. */
 export interface PendingDeposit {
   txid: string;
   vout: number;
   valueSats: number | null;
   confirmations: number;
-  /** What the SSP would credit, once it will quote. */
+  /** What the SSP would credit, once it will quote. Null until it is claimable. */
   creditSats: number | null;
   quoteError: string | null;
+  /** When this wallet first saw the deposit. Epoch millis. */
+  firstSeenAt: number;
+}
+
+/** True once the deposit is deep enough and the SSP has priced it. */
+export function depositClaimable(d: PendingDeposit): boolean {
+  return d.confirmations >= DEPOSIT_CONFIRMATIONS && d.creditSats !== null;
 }
 
 interface State {
@@ -119,6 +129,8 @@ interface State {
   sparkAddress: string | null;
   staticDepositAddress: string | null;
   deposits: PendingDeposit[];
+  /** "txid:vout" of every deposit a claim is in flight for. */
+  claiming: string[];
 
   /** Sealed with the vault key; only loaded while unlocked. */
   contacts: Contact[];
@@ -180,7 +192,7 @@ interface Actions {
   removeContact(id: string): Promise<void>;
 
   checkDeposits(): Promise<void>;
-  claimDeposit(txid: string, vout: number): Promise<void>;
+  claimDeposit(txid: string, vout: number): Promise<ClaimResult>;
 
   /** Captures every leaf and its ancestors from the operators and arms the exit. */
   captureForExit(): Promise<void>;
@@ -196,6 +208,28 @@ interface Actions {
 }
 
 const EMPTY_BALANCE: Balance = { available: 0, owned: 0, incoming: 0 };
+
+/**
+ * Claims confirmed deposits without asking, when the user has turned that on
+ * and the SSP's fee is within the ceiling they set.
+ *
+ * Opt-in, because claiming spends their money on a fee. The fee is recomputed
+ * from this poll's quote rather than trusted from the setting alone, and a
+ * deposit priced above the ceiling is left for a person to look at — never
+ * claimed at whatever the SSP happens to be asking.
+ */
+async function autoClaim(get: () => State & Actions): Promise<void> {
+  const { settings, deposits, claiming } = get();
+  if (!settings.autoClaimDeposits) return;
+
+  for (const d of deposits) {
+    if (claiming.includes(`${d.txid}:${d.vout}`)) continue;
+    if (!autoClaimable(d, { enabled: true, maxFeeSats: settings.autoClaimMaxFeeSats })) continue;
+    // Sequential on purpose: each claim re-quotes, and the SSP prices a deposit
+    // against the wallet's current state.
+    await get().claimDeposit(d.txid, d.vout);
+  }
+}
 
 const EMPTY_EXIT: ExitState = {
   job: null,
@@ -301,6 +335,7 @@ export const useWallet = create<State & Actions>((set, get) => ({
   sparkAddress: null,
   staticDepositAddress: null,
   deposits: [],
+  claiming: [],
   contacts: [],
   streamConnected: false,
   syncing: false,
@@ -408,6 +443,7 @@ export const useWallet = create<State & Actions>((set, get) => ({
       sparkAddress: null,
       staticDepositAddress: null,
       deposits: [],
+      claiming: [],
       contacts: [],
       streamConnected: false,
       stableBusy: false,
@@ -721,20 +757,43 @@ export const useWallet = create<State & Actions>((set, get) => ({
       if (!get().staticDepositAddress) set({ staticDepositAddress: address });
       const utxos = await s.wallet.getUtxosForDepositAddress(address, 100, 0, true);
       const esplora = ESPLORA_URL[s.settings.network];
+      const previous = new Map(get().deposits.map((d) => [`${d.txid}:${d.vout}`, d]));
       const deposits: PendingDeposit[] = [];
+
       for (const u of utxos) {
         const out = await depositOutput(esplora, u.txid, u.vout);
+        const seen = previous.get(`${u.txid}:${u.vout}`);
         let creditSats: number | null = null;
         let quoteError: string | null = null;
-        try {
-          const q = await s.wallet.getClaimStaticDepositQuote(u.txid, u.vout);
-          creditSats = q.creditAmountSats;
-        } catch (e) {
-          quoteError = readableError(e);
+
+        // Only quote once the deposit is deep enough to claim. Quoting earlier
+        // spends a request to be told what the confirmation count already says,
+        // and its failure reads to the user as something being wrong.
+        if (out.confirmations >= DEPOSIT_CONFIRMATIONS) {
+          try {
+            const q = await s.wallet.getClaimStaticDepositQuote(u.txid, u.vout);
+            creditSats = q.creditAmountSats;
+          } catch (e) {
+            quoteError = readableError(e);
+          }
         }
-        deposits.push({ txid: u.txid, vout: u.vout, valueSats: out.valueSats, confirmations: out.confirmations, creditSats, quoteError });
+
+        deposits.push({
+          txid: u.txid,
+          vout: u.vout,
+          valueSats: out.valueSats,
+          confirmations: out.confirmations,
+          creditSats,
+          quoteError,
+          // Kept from the first sighting so the activity list can order deposits
+          // against payments; the chain does not tell us when we noticed.
+          firstSeenAt: seen?.firstSeenAt ?? Date.now(),
+        });
       }
-      if (get().wallet === s.wallet) set({ deposits });
+
+      if (get().wallet !== s.wallet) return;
+      set({ deposits });
+      await autoClaim(get);
     } catch {
       /* deposits are checked again on the next tick; never block the wallet on this */
     }
@@ -742,7 +801,16 @@ export const useWallet = create<State & Actions>((set, get) => ({
 
   async claimDeposit(txid, vout) {
     const s = get();
-    if (!s.wallet) return;
+    if (!s.wallet) return { ok: false, error: "The wallet is locked." };
+
+    const id = `${txid}:${vout}`;
+    if (get().claiming.includes(id)) {
+      // Claiming twice concurrently would spend a second quote on a deposit the
+      // first call is already consuming.
+      return { ok: false, error: "That deposit is already being claimed." };
+    }
+    set({ claiming: [...get().claiming, id] });
+
     try {
       // A fresh quote: the fee is only honoured for the quote it was signed with.
       const q = await s.wallet.getClaimStaticDepositQuote(txid, vout);
@@ -754,9 +822,13 @@ export const useWallet = create<State & Actions>((set, get) => ({
       });
       set({ error: null });
       await get().refresh();
+      return { ok: true, creditedSats: q.creditAmountSats };
     } catch (e) {
-      set({ error: readableError(e) });
+      const error = readableError(e);
+      set({ error });
+      return { ok: false, error };
     } finally {
+      set({ claiming: get().claiming.filter((c) => c !== id) });
       await get().checkDeposits();
     }
   },
@@ -893,6 +965,7 @@ export const useWallet = create<State & Actions>((set, get) => ({
       sparkAddress: null,
       staticDepositAddress: null,
       deposits: [],
+      claiming: [],
       contacts: [],
       backupVerified: false,
       backupDeferred: false,

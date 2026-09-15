@@ -48,12 +48,28 @@ export interface Settings {
   network: NetworkName;
   leafLayout: LeafLayout;
   stableMode: StableMode;
+  /**
+   * Claim confirmed on-chain deposits without asking, while the SSP's fee is at
+   * or below `autoClaimMaxFeeSats`.
+   *
+   * Off by default: claiming spends the user's money on a fee, so it is their
+   * decision. It is offered at all because bitcoin sitting at the static
+   * deposit address is *not* recoverable from the recovery phrase alone — that
+   * address is a P2TR of the user's key combined with the operators', so
+   * claiming (or refunding) needs them either way. Leaving a deposit unclaimed
+   * is therefore not the safe default it looks like.
+   */
+  autoClaimDeposits: boolean;
+  /** Fee ceiling for auto-claim, in sats. Above this, the deposit waits for a person. */
+  autoClaimMaxFeeSats: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   network: "MAINNET",
   leafLayout: "payments",
   stableMode: "off",
+  autoClaimDeposits: false,
+  autoClaimMaxFeeSats: 500,
 };
 
 let dbPromise: Promise<IDBDatabase> | null = null;
