@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { selectExitLocked, useWallet } from "../store/wallet";
+import { useMemo, useState } from "react";
+import { depositClaimable, selectExitLocked, useWallet, type PendingDeposit } from "../store/wallet";
 import { formatSats, relativeTime, truncateMiddle } from "../lib/format";
-import { DEPOSIT_CONFIRMATIONS } from "../lib/deposits";
+import { describeDeposit, mergeActivity } from "../lib/activity";
+import { ClaimDeposit } from "./ClaimDeposit";
 import { formatUsd } from "../lib/stable";
 import { Banner, CopyButton, Sheet } from "../components/ui";
 import { Receive } from "./Receive";
@@ -17,6 +18,7 @@ export function Home() {
   const [backupBannerHidden, setBackupBannerHidden] = useState(false);
   const [storageBannerHidden, setStorageBannerHidden] = useState(false);
   const [detail, setDetail] = useState<CachedActivity | null>(null);
+  const [claim, setClaim] = useState<PendingDeposit | null>(null);
 
   const activity = useWallet((s) => s.activity);
   const error = useWallet((s) => s.error);
@@ -26,9 +28,13 @@ export function Home() {
   const mnemonic = useWallet((s) => s.mnemonic);
   const exitRunning = useWallet(selectExitLocked);
   const exitArmed = useWallet((s) => !!s.exit.capture);
-  const claimable = useWallet(
-    (s) => s.deposits.filter((d) => d.confirmations >= DEPOSIT_CONFIRMATIONS && d.creditSats !== null).length,
-  );
+  const deposits = useWallet((s) => s.deposits);
+  const claimableDeposits = useMemo(() => deposits.filter(depositClaimable), [deposits]);
+  const claimable = claimableDeposits.length;
+
+  // Unclaimed deposits are not in the SDK's transfer list, so they are merged in
+  // here rather than cached — a claimed one must not survive as a stale row.
+  const rows = useMemo(() => mergeActivity(activity, deposits), [activity, deposits]);
 
   if (showBackup && mnemonic) {
     return <Backup mnemonic={mnemonic} onDone={() => setShowBackup(false)} />;
@@ -75,7 +81,9 @@ export function Home() {
         <Banner>
           {claimable === 1 ? "An on-chain deposit is" : `${claimable} on-chain deposits are`} ready to
           claim into your balance.{" "}
-          <button className="link" onClick={() => setSheet("receive")}>
+          {/* Straight to the claim, not to the Receive sheet — that opened on the
+              invoice tab, two clicks from the deposit and with no sign of it. */}
+          <button className="link" onClick={() => setClaim(claimableDeposits[0]!)}>
             Review and claim
           </button>
         </Banner>
@@ -110,34 +118,62 @@ export function Home() {
 
       <div className="activity">
         <h2>Activity</h2>
-        {activity.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="muted" style={{ paddingTop: 10 }}>
             Nothing yet. Payments you send and receive will show up here.
           </p>
         ) : (
-          activity.map((t) => (
-            <button className="tx" key={t.id} onClick={() => setDetail(t)}>
-              <div className="tx-icon">{t.direction === "in" ? "↓" : "↑"}</div>
-              <div className="tx-main">
-                <div className="tx-title">
-                  {t.memo || (t.direction === "in" ? "Received" : "Sent")}
+          rows.map((row) =>
+            row.type === "deposit" ? (
+              <button className="tx" key={row.id} onClick={() => setClaim(row.deposit)}>
+                <div className="tx-icon">↓</div>
+                <div className="tx-main">
+                  <div className="tx-title">
+                    {row.stage === "claimable" ? "Deposit ready to claim" : "On-chain deposit"}
+                  </div>
+                  <div className="tx-sub">
+                    {row.stage !== "claimable" && <span className="pending-dot" />}
+                    {row.stage !== "claimable" ? "pending · " : ""}
+                    {describeDeposit(row.deposit)}
+                  </div>
                 </div>
-                <div className="tx-sub">
-                  {!t.settled && <span className="pending-dot" />}
-                  {!t.settled ? "pending · " : ""}
-                  {kindLabel(t.kind)} · {relativeTime(t.time)}
+                <div className="tx-amount in">
+                  +{row.deposit.valueSats !== null ? formatSats(row.deposit.valueSats) : "…"}
                 </div>
-              </div>
-              <div className={`tx-amount ${t.direction === "in" ? "in" : ""}`}>
-                {t.direction === "in" ? "+" : "−"}
-                {formatSats(t.amountSats)}
-              </div>
-            </button>
-          ))
+              </button>
+            ) : (
+              <button className="tx" key={row.id} onClick={() => setDetail(row.tx)}>
+                <div className="tx-icon">{row.tx.direction === "in" ? "↓" : "↑"}</div>
+                <div className="tx-main">
+                  <div className="tx-title">
+                    {row.tx.memo || (row.tx.direction === "in" ? "Received" : "Sent")}
+                  </div>
+                  <div className="tx-sub">
+                    {!row.tx.settled && <span className="pending-dot" />}
+                    {!row.tx.settled ? "pending · " : ""}
+                    {kindLabel(row.tx.kind)} · {relativeTime(row.tx.time)}
+                  </div>
+                </div>
+                <div className={`tx-amount ${row.tx.direction === "in" ? "in" : ""}`}>
+                  {row.tx.direction === "in" ? "+" : "−"}
+                  {formatSats(row.tx.amountSats)}
+                </div>
+              </button>
+            ),
+          )
         )}
       </div>
 
       {detail && <TransactionDetail tx={detail} onClose={() => setDetail(null)} />}
+
+      {claim && (
+        <ClaimDeposit
+          // Re-read from the store so confirmations and the quote stay live
+          // while the sheet is open; the row that opened it is a snapshot.
+          deposit={deposits.find((d) => d.txid === claim.txid && d.vout === claim.vout) ?? claim}
+          onClose={() => setClaim(null)}
+        />
+      )}
 
       {sheet === "receive" && (
         <Receive

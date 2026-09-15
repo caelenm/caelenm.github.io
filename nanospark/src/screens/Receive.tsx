@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { useWallet } from "../store/wallet";
+import { depositClaimable, useWallet, type PendingDeposit } from "../store/wallet";
+import { describeDeposit } from "../lib/activity";
+import { ClaimDeposit } from "./ClaimDeposit";
 import { CopyButton, QR, Sheet, Spinner } from "../components/ui";
 import { countdown, formatSats, readableError, truncateMiddle } from "../lib/format";
 import { DEPOSIT_CONFIRMATIONS } from "../lib/deposits";
@@ -260,54 +262,48 @@ function AddressTab() {
   );
 }
 
-/** Deposits to the static address, waiting to be claimed. Nothing credits until claimed. */
+/**
+ * Deposits to the static address, shown alongside the address that received
+ * them. Claiming happens in the ClaimDeposit sheet, the same one the activity
+ * list and the home banner open — one claim flow, not three.
+ */
 export function PendingDeposits() {
   const deposits = useWallet((s) => s.deposits);
-  const claimDeposit = useWallet((s) => s.claimDeposit);
-  const error = useWallet((s) => s.error);
-  const [claiming, setClaiming] = useState<string | null>(null);
+  const [claim, setClaim] = useState<PendingDeposit | null>(null);
 
   return (
     <div className="card pad" style={{ marginTop: 14 }}>
       <div className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
-        Deposits waiting to be claimed
+        Deposits to this address
       </div>
       {deposits.map((d) => {
-        const id = `${d.txid}:${d.vout}`;
-        const ready = d.confirmations >= DEPOSIT_CONFIRMATIONS && d.creditSats !== null;
-        const fee = d.valueSats !== null && d.creditSats !== null ? d.valueSats - d.creditSats : null;
+        const ready = depositClaimable(d);
         return (
-          <div key={id} className="kv" style={{ alignItems: "center" }}>
+          <div key={`${d.txid}:${d.vout}`} className="kv" style={{ alignItems: "center" }}>
             <span className="k">
               <span style={{ color: "var(--text)" }}>
                 {d.valueSats !== null ? `${formatSats(d.valueSats)} sats` : truncateMiddle(d.txid, 8, 6)}
               </span>
-              <div style={{ fontSize: 12 }}>
-                {d.confirmations < DEPOSIT_CONFIRMATIONS
-                  ? `${d.confirmations} of ${DEPOSIT_CONFIRMATIONS} confirmations`
-                  : d.creditSats !== null
-                    ? `Credits ${formatSats(d.creditSats)} sats${fee !== null ? ` · SSP fee ${formatSats(fee)}` : ""}`
-                    : `No quote yet${d.quoteError ? ` — ${d.quoteError}` : ""}`}
-              </div>
+              <div style={{ fontSize: 12 }}>{describeDeposit(d)}</div>
             </span>
             <span className="v">
               <button
-                className="btn primary"
+                className={ready ? "btn primary" : "btn ghost"}
                 style={{ padding: "9px 14px", fontSize: 14 }}
-                disabled={!ready || claiming !== null}
-                onClick={async () => {
-                  setClaiming(id);
-                  await claimDeposit(d.txid, d.vout);
-                  setClaiming(null);
-                }}
+                onClick={() => setClaim(d)}
               >
-                {claiming === id ? <Spinner /> : "Claim"}
+                {ready ? "Claim" : "Details"}
               </button>
             </span>
           </div>
         );
       })}
-      {error && <div className="err">{error}</div>}
+      {claim && (
+        <ClaimDeposit
+          deposit={deposits.find((d) => d.txid === claim.txid && d.vout === claim.vout) ?? claim}
+          onClose={() => setClaim(null)}
+        />
+      )}
     </div>
   );
 }
