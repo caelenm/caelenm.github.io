@@ -1,0 +1,1 @@
+{"status":"OK","tag":"payRequest","commentAllowed":255,"callback":"https://names.coinos.io/lnurlp/cjm/cb?domain=coinos.io","metadata":"[[\"text/identifier\",\"pay@caelen.ca\"],[\"text/plain\",\"paying off-chain\"]]","minSendable":1000,"maxSendable":25000000000,"payerData":{"name":{"mandatory":false},"email":{"mandatory":false},"pubkey":{"mandatory":false}},"allowsNostr":false}

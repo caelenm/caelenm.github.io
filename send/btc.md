@@ -1,0 +1,10 @@
+lightning:
+ln@caelen.ca
+
+
+silent payments:
+sp1qq2dz2gh0qskfgpu3cq0grkr27a6303pxlyay4kkx0g468uzsyrvv5qcld74aparskh7sk4zdcv5dmjara6kz3jy8kek0pag4jl3uxnazsghz0qac
+
+
+on-chain:
+bc1q9atenwdrty05hf8hs30qg5v4dpux4kmma3are3

@@ -1,0 +1,9 @@
+{
+  "schema": "satstore.inventory/1",
+  "updated_at": "2026-09-05T17:49:49.766Z",
+  "quantities": {
+    "905a59c1": 2,
+    "28bd0f4c": 9999,
+    "805d43dc": 10
+  }
+}
