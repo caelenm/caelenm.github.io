@@ -8,7 +8,7 @@ import { decodeInvoice, isExpired } from "../lib/bolt11";
 import { classifySend, sendRequestId, watchLightningSend } from "../lib/lightning";
 import { LnurlError, requestInvoice, resolvePayParams, type PayParams } from "../lib/lnurl";
 import { formatSats, readableError, truncateMiddle } from "../lib/format";
-import { StableError, formatUsd } from "../lib/stable";
+import { StableError, formatUsd, satsToUsdUnits } from "../lib/stable";
 import type { Contact, ContactKind } from "../lib/db";
 
 /** Headroom over the SDK's estimate, so a small routing surprise doesn't fail the payment. */
@@ -638,6 +638,10 @@ function AmountStep({
   onPick: (amountSats: number) => Promise<void>;
   onBack: () => void;
 }) {
+  const stableModeForDisplay = useWallet((s) => s.settings.stableMode);
+  const unitsPerSat = useWallet((s) => s.unitsPerSat);
+  const inUsd = stableModeForDisplay === "whole" && unitsPerSat !== null;
+
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [maxNote, setMaxNote] = useState<string | null>(null);
@@ -704,12 +708,20 @@ function AmountStep({
     }
   }
 
+  // In whole-balance mode the wallet is denominated in dollars, so the amount
+  // is echoed there too. The field itself stays in sats: that is the unit the
+  // invoice, the fee and the payment are all actually in, and converting the
+  // input would quietly change what is sent.
+  const usdFor = (n: number) =>
+    inUsd && Number.isFinite(n) && n > 0 ? `≈${formatUsd(satsToUsdUnits(n, unitsPerSat!))}` : null;
+  const amountInUsd = usdFor(sats);
+
   const spendableNote =
     extra === "loading"
       ? `Spendable ${formatSats(max)} sats, plus your USD balance — getting a quote…`
       : extra === null
         ? `Spendable ${formatSats(max)} sats. Your USD balance could not be quoted right now, so it is not counted — try again in a moment.`
-        : `Spendable ${formatSats(spendable)} sats${extraSats > 0 ? ` (${formatSats(max)} bitcoin + about ${formatSats(extraSats)} from USD)` : ""}`;
+        : `Spendable ${formatSats(spendable)} sats${usdFor(spendable) ? ` (${usdFor(spendable)})` : ""}${extraSats > 0 ? ` — ${formatSats(max)} bitcoin + about ${formatSats(extraSats)} from USD` : ""}`;
 
   return (
     <div>
@@ -741,7 +753,12 @@ function AmountStep({
           }}
         />
       </label>
-      <p className="muted" style={{ fontSize: 12.5, marginTop: -8 }}>
+      {amountInUsd && (
+        <p className="muted" style={{ fontSize: 13, marginTop: -8, marginBottom: 4 }}>
+          {amountInUsd}
+        </p>
+      )}
+      <p className="muted" style={{ fontSize: 12.5, marginTop: amountInUsd ? 0 : -8 }}>
         {maxNote ?? spendableNote}
       </p>
       <div className="row" style={{ marginTop: 14 }}>
