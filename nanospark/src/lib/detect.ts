@@ -1,8 +1,12 @@
 /**
  * Destination detection for the one paste field on the Send sheet.
+ *
+ * Explicit .ts extensions so `npm test` can load this under Node's ESM
+ * resolver, which (unlike Vite) will not guess at them.
  */
 import { isValidSparkAddress } from "@buildonspark/spark-sdk";
-import { decodeInvoice, type DecodedInvoice } from "./bolt11";
+import { decodeInvoice, type DecodedInvoice } from "./bolt11.ts";
+import { addressNetwork } from "./address.ts";
 
 export type Destination =
   | { kind: "bolt11"; raw: string; decoded: DecodedInvoice }
@@ -46,7 +50,12 @@ export function detect(input: string): Destination {
     /* not a Spark address */
   }
 
-  if (ONCHAIN.test(raw)) return { kind: "onchain", raw };
+  // Shape first, then the checksum. The regex alone would accept a mistyped
+  // address, which detect() would then present as a valid destination and offer
+  // to save as a contact — a typo made permanent and reusable. addressNetwork
+  // decodes it properly; which chain it belongs to is checked at the point of
+  // withdrawal, where the wallet's own network is known.
+  if (ONCHAIN.test(raw) && addressNetwork(raw) !== null) return { kind: "onchain", raw };
 
   return { kind: "unknown", raw };
 }

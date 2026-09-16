@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ExitSpeed } from "@buildonspark/spark-sdk/types";
 import { selectExitLocked, useWallet } from "../store/wallet";
+import { validateOnchainAddress } from "../lib/address";
 import { Confirm, CopyButton, QR, Sheet, Spinner } from "../components/ui";
 import { formatSats, readableError, relativeTime, truncateMiddle } from "../lib/format";
 import {
@@ -52,6 +53,7 @@ export function Cooperative({ initialAddress = "" }: { initialAddress?: string }
   const stableMode = useWallet((s) => s.settings.stableMode);
   const withStableCover = useWallet((s) => s.withStableCover);
   const exitRunning = useWallet(selectExitLocked);
+  const network = useWallet((s) => s.settings.network);
 
   const [address, setAddress] = useState(initialAddress);
   const [amount, setAmount] = useState("");
@@ -69,8 +71,10 @@ export function Cooperative({ initialAddress = "" }: { initialAddress?: string }
 
   const sats = Number(amount);
   const amountOk = isMax ? balance.available > 0 : Number.isInteger(sats) && sats > 0;
-  const canQuote =
-    !exitRunning && address.trim().length > 12 && amountOk && (balance.available > 0 || stableCovers);
+  // Checked locally rather than left to the SSP: a mistyped address still has a
+  // valid-looking length, and paying one loses the money for good.
+  const addressCheck = validateOnchainAddress(address, network);
+  const canQuote = !exitRunning && addressCheck.ok && amountOk && (balance.available > 0 || stableCovers);
 
   /** Any change to the inputs invalidates the quote — it is priced per address, amount and speed. */
   function invalidate<T>(setter: (v: T) => void) {
@@ -111,6 +115,13 @@ export function Cooperative({ initialAddress = "" }: { initialAddress?: string }
 
   async function withdraw() {
     if (!wallet || !fee) return;
+    // Re-checked at the point of no return: the quote was fetched against this
+    // address, but nothing stops it having been edited since.
+    const check = validateOnchainAddress(address, network);
+    if (!check.ok) {
+      setErr(check.reason);
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -169,6 +180,11 @@ export function Cooperative({ initialAddress = "" }: { initialAddress?: string }
           spellCheck={false}
           onChange={(e) => invalidate(setAddress)(e.target.value)}
         />
+        {/* Only once they have typed something worth judging — an error on an
+            empty field is noise, not help. */}
+        {address.trim().length > 0 && !addressCheck.ok && (
+          <div className="err">{addressCheck.reason}</div>
+        )}
       </label>
 
       <label className="field">
