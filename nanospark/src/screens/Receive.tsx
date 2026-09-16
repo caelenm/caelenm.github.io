@@ -201,6 +201,8 @@ function AddressTab() {
   const [fetched, setFetched] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [which, setWhich] = useState<"spark" | "onchain">("spark");
+  const [scanning, setScanning] = useState(false);
+  const [scanNote, setScanNote] = useState<string | null>(null);
   const deposit = knownDeposit ?? fetched;
 
   useEffect(() => {
@@ -223,6 +225,32 @@ function AddressTab() {
   useEffect(() => {
     if (which === "onchain") void checkDeposits();
   }, [which, checkDeposits]);
+
+  /**
+   * An explicit scan, because waiting out the background poll to learn whether
+   * a payment arrived is the wrong experience — and polling every few seconds
+   * just to shorten that wait would get the mempool API to rate-limit us, which
+   * makes detection slower, not faster.
+   *
+   * A deposit is visible here from the moment it hits the mempool, before any
+   * confirmation, so this answers "did it send?" immediately.
+   */
+  async function scan() {
+    setScanning(true);
+    setScanNote(null);
+    const before = useWallet.getState().deposits.length;
+    try {
+      await checkDeposits();
+      const found = useWallet.getState().deposits.length - before;
+      setScanNote(
+        found > 0
+          ? `Found ${found} new deposit${found === 1 ? "" : "s"}.`
+          : "No new deposits. A payment shows up here as soon as it reaches the mempool.",
+      );
+    } finally {
+      setScanning(false);
+    }
+  }
 
   const value = which === "spark" ? sparkAddress : deposit;
 
@@ -256,6 +284,30 @@ function AddressTab() {
           ? "Your Spark address. Reusable, and instant for anyone paying from another Spark wallet."
           : `A reusable Bitcoin address. A deposit can be claimed into your balance once it has ${DEPOSIT_CONFIRMATIONS} confirmations (about ${DEPOSIT_CONFIRMATIONS * 10} minutes on mainnet), and the SSP charges a fee to convert it — shown below before you claim.`}
       </p>
+
+      {which === "onchain" && (
+        <>
+          <button
+            className="btn ghost"
+            style={{ width: "100%", marginTop: 12 }}
+            disabled={scanning || !deposit}
+            onClick={() => void scan()}
+          >
+            {scanning ? (
+              <>
+                <Spinner /> Scanning…
+              </>
+            ) : (
+              "Scan for deposits"
+            )}
+          </button>
+          {scanNote && (
+            <p className="muted" style={{ marginTop: 8, fontSize: 12.5 }}>
+              {scanNote}
+            </p>
+          )}
+        </>
+      )}
 
       {which === "onchain" && deposits.length > 0 && <PendingDeposits />}
     </div>

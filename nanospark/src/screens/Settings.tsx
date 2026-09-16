@@ -19,6 +19,13 @@ export function Settings({ onClose, onShowBackup }: { onClose: () => void; onSho
   const backupVerified = useWallet((s) => s.backupVerified);
   const privacyEnabled = useWallet((s) => s.privacyEnabled);
   const setPrivacy = useWallet((s) => s.setPrivacy);
+  const balance = useWallet((s) => s.balance);
+  const usdbUnits = useWallet((s) => s.usdbUnits);
+  const deposits = useWallet((s) => s.deposits);
+
+  // Unclaimed deposits count: they are this wallet's money too, and wiping
+  // strands them exactly as thoroughly as it strands the balance.
+  const holdsFunds = balance.available > 0 || usdbUnits > 0n || deposits.length > 0;
 
   const [privacyBusy, setPrivacyBusy] = useState(false);
   const [view, setView] = useState<View>("root");
@@ -263,11 +270,34 @@ export function Settings({ onClose, onShowBackup }: { onClose: () => void; onSho
                 This deletes the encrypted phrase, the history, and the settings stored in this
                 browser.
               </p>
+              {/* Wiping an empty, backed-up wallet is housekeeping. Wiping one
+                  that still holds money the user has never written down is the
+                  single most destructive thing this app can do, so it says so
+                  in those terms rather than in the same words as every other
+                  warning. */}
+              {holdsFunds && (
+                <div className="notice stark">
+                  This wallet still holds <strong>{formatSats(balance.available)} sats</strong>
+                  {usdbUnits > 0n ? ` and ${formatUsd(usdbUnits)}` : ""}.
+                  {!backupVerified && (
+                    <>
+                      {" "}
+                      You have <strong>not confirmed your recovery phrase</strong>. If it is not
+                      written down, wiping now destroys the only key to this money.
+                    </>
+                  )}
+                </div>
+              )}
               <div className="notice stark">
                 Your <strong>12-word recovery phrase is the only way back</strong>. If it is not
                 written down somewhere you can reach, the money is gone permanently. Nobody can
                 undo this.
               </div>
+              {holdsFunds && !backupVerified && (
+                <p className="muted" style={{ fontSize: 12.5 }}>
+                  Back up the phrase first — it takes a minute, and it makes this reversible.
+                </p>
+              )}
             </>
           }
           confirmLabel="Wipe everything"
