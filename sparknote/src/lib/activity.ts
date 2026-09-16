@@ -88,6 +88,51 @@ export function describeDeposit(d: DepositLike): string {
 }
 
 /**
+ * Kinds that were positively identified. "spark" and "unknown" are what a row
+ * falls back to when nothing identified it, so they are absence of knowledge,
+ * not knowledge of absence.
+ */
+const IDENTIFIED = new Set<CachedActivity["kind"]>(["lightning", "onchain", "swap", "internal"]);
+
+/** The pools this wallet has swapped with, recovered from rows already known to be swaps. */
+export function poolIdsIn(activity: readonly CachedActivity[]): string[] {
+  return activity.flatMap((a) => (a.kind === "swap" && a.counterparty ? [a.counterparty] : []));
+}
+
+/**
+ * Carries a known classification forward onto a freshly fetched row.
+ *
+ * What a transfer *was* cannot change — a swap does not become a payment — but
+ * how well this wallet can recognise it does, because recognising a swap needs
+ * the pool's identity and that is learned at runtime. Re-fetching with that
+ * knowledge missing used to overwrite a correct "Swap" row with "Sent", and
+ * then persist the downgrade to the cache, so a reload could permanently
+ * relabel a swap as money leaving the wallet.
+ *
+ * So classification is only ever allowed to improve: an identified kind is kept
+ * unless the fresh row identifies one too. Everything else — status, amount,
+ * timestamps — still comes from the operators, which remain the authority on
+ * anything that genuinely changes.
+ */
+export function reconcileActivity(
+  fresh: readonly CachedActivity[],
+  previous: readonly CachedActivity[],
+): CachedActivity[] {
+  if (!previous.length) return [...fresh];
+  const before = new Map(previous.map((a) => [a.id, a]));
+  return fresh.map((row) => {
+    if (IDENTIFIED.has(row.kind)) return row;
+    const old = before.get(row.id);
+    if (!old || !IDENTIFIED.has(old.kind)) return row;
+    return {
+      ...row,
+      kind: old.kind,
+      ...(old.swapDirection ? { swapDirection: old.swapDirection } : {}),
+    };
+  });
+}
+
+/**
  * Merges deposits into the activity list, newest first, with anything the user
  * can act on pulled to the top.
  *

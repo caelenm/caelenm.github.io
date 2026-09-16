@@ -29,6 +29,21 @@ import {
  */
 export const knownPoolIds = new Set<string>();
 
+/**
+ * Seeds the set from pools already known to have been swapped with.
+ *
+ * This set is built lazily by `pool()`, which only runs when the wallet
+ * actually touches the AMM. That left it empty for the whole first render
+ * after a reload, so a swap made yesterday was re-read as an ordinary payment
+ * — the same transfer showing as "Swap" in one session and "Sent" in the next.
+ * The activity cache remembers the counterparty of every row it already knows
+ * to be a swap, so the classification is restored from it before any network
+ * call.
+ */
+export function primePoolIds(ids: Iterable<string | undefined>): void {
+  for (const id of ids) if (id) knownPoolIds.add(id);
+}
+
 const MINIMUMS_TTL_MS = 10 * 60_000;
 const FALLBACK_MINIMUMS: SwapMinimums = { btcSats: 800n, usdbUnits: 500_000n };
 
@@ -107,6 +122,10 @@ export async function createFlashnetProvider(wallet: SparkWallet, network: Stabl
   let minimums: { value: SwapMinimums; at: number } | null = null;
 
   return {
+    async warm() {
+      await pool();
+    },
+
     async minimums() {
       if (minimums && Date.now() - minimums.at < MINIMUMS_TTL_MS) return minimums.value;
       try {

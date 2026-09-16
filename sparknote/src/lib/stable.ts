@@ -50,6 +50,12 @@ export interface SwapMinimums {
 }
 
 export interface SwapProvider {
+  /**
+   * Optional: resolves the pool this wallet swaps through without swapping.
+   * Used to identify past swaps in the activity list on a wallet whose cache
+   * was never written — restoring a seed on a new device, say.
+   */
+  warm?(): Promise<void>;
   minimums(): Promise<SwapMinimums>;
   /** Quoted output for an exact input: sats in → USDB units out, or the reverse. */
   quote(direction: SwapDirection, amountIn: bigint): Promise<bigint>;

@@ -14,6 +14,8 @@ import {
   depositStage,
   describeDeposit,
   mergeActivity,
+  poolIdsIn,
+  reconcileActivity,
   type DepositLike,
 } from "./activity.ts";
 import type { CachedActivity } from "./db.ts";
@@ -148,6 +150,53 @@ const tx = (over: Partial<CachedActivity> = {}): CachedActivity => ({
   const zero = { enabled: true, maxFeeSats: 0 };
   check("a zero ceiling refuses any fee", autoClaimable(dep(), zero), false);
   check("a zero ceiling allows a zero fee", autoClaimable(dep({ creditSats: 100_000 }), zero), true);
+}
+
+/* --- classification never degrades ----------------------------------------- */
+{
+  // The bug: recognising a swap needs the pool's identity, which is learned at
+  // runtime, so the same transfer read as "Swap" in one session and "Sent" in
+  // the next — and the downgrade was written back to the cache.
+  const swap = tx({ id: "s", kind: "swap", swapDirection: "toStable", counterparty: "pool", direction: "out" });
+  const degraded = { ...swap, kind: "spark" as const, swapDirection: undefined };
+
+  check(
+    "a swap is not relabelled a payment when the pool is unknown",
+    reconcileActivity([degraded], [swap]).map((a) => [a.kind, a.swapDirection]),
+    [["swap", "toStable"]],
+  );
+  check(
+    "an unknown kind is upgraded the same way",
+    reconcileActivity([{ ...degraded, kind: "unknown" }], [swap])[0].kind,
+    "swap",
+  );
+
+  // Only the classification is carried over: the operators stay the authority
+  // on anything that genuinely changes.
+  const settledLater = reconcileActivity([{ ...degraded, status: "COMPLETED", settled: true, amountSats: 7 }], [
+    { ...swap, status: "PENDING", settled: false, amountSats: 7 },
+  ])[0];
+  check("status still comes from the fresh row", [settledLater.status, settledLater.settled], ["COMPLETED", true]);
+
+  // And it must not invent classifications it was never given.
+  check(
+    "a genuine payment stays a payment",
+    reconcileActivity([tx({ id: "p", kind: "spark" })], [tx({ id: "p", kind: "spark" })])[0].kind,
+    "spark",
+  );
+  check(
+    "a fresh identification wins over the cached one",
+    reconcileActivity([tx({ id: "x", kind: "onchain" })], [tx({ id: "x", kind: "spark" })])[0].kind,
+    "onchain",
+  );
+  check(
+    "an unseen row is left exactly as fetched",
+    reconcileActivity([tx({ id: "new", kind: "spark" })], [swap])[0].kind,
+    "spark",
+  );
+
+  check("pools are recovered from known swaps", poolIdsIn([swap, tx({ id: "b", kind: "spark", counterparty: "bob" })]), ["pool"]);
+  check("a swap with no counterparty yields nothing", poolIdsIn([tx({ kind: "swap" })]), []);
 }
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
