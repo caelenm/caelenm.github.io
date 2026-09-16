@@ -279,7 +279,9 @@ export interface CachedActivity {
   settled: boolean;
   /** Epoch millis. */
   time: number;
-  kind: "lightning" | "spark" | "onchain" | "unknown";
+  kind: "lightning" | "spark" | "onchain" | "swap" | "internal" | "unknown";
+  /** For a swap: which way the value went. */
+  swapDirection?: "toStable" | "toBitcoin";
   /* Detail-view fields. All optional: an older cache entry simply shows less. */
   counterparty?: string;
   updatedTime?: number;

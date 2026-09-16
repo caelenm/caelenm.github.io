@@ -43,7 +43,7 @@ import {
   type SwapDirection,
   type SwapProvider,
 } from "../lib/stable";
-import { createFlashnetProvider, usdbAvailable } from "../lib/flashnet";
+import { createFlashnetProvider, knownPoolIds, usdbAvailable } from "../lib/flashnet";
 import {
   captureExitNodes,
   createEsplora,
@@ -128,6 +128,11 @@ interface State {
   balanceLoaded: boolean;
   /** Spendable USDB, in base units (1e-6 USD). */
   usdbUnits: bigint;
+  /**
+   * USDB units one sat is worth right now, for showing figures in USD. Display
+   * only, and null until a quote arrives — never used to size a swap.
+   */
+  unitsPerSat: number | null;
   activity: CachedActivity[];
   sparkAddress: string | null;
   staticDepositAddress: string | null;
@@ -371,6 +376,7 @@ export const useWallet = create<State & Actions>((set, get) => ({
   balance: EMPTY_BALANCE,
   balanceLoaded: false,
   usdbUnits: 0n,
+  unitsPerSat: null,
   activity: [],
   sparkAddress: null,
   staticDepositAddress: null,
@@ -498,12 +504,17 @@ export const useWallet = create<State & Actions>((set, get) => ({
     if (!wallet) return;
     set({ syncing: true });
     try {
-      const [bal, transfers, spark] = await Promise.all([
+      const [bal, transfers, spark, identity] = await Promise.all([
         wallet.getBalance(),
         wallet.getTransfers(50, 0),
         wallet.getSparkAddress(),
+        wallet.getIdentityPublicKey().catch(() => undefined),
       ]);
-      const activity = transfers.transfers.map(toActivity);
+      const context: ActivityContext = {
+        ...(identity ? { ownIdentity: identity } : {}),
+        poolIds: knownPoolIds,
+      };
+      const activity = transfers.transfers.map((t) => toActivity(t, context));
       set({
         balance: {
           available: Number(bal.satsBalance.available),
@@ -517,6 +528,17 @@ export const useWallet = create<State & Actions>((set, get) => ({
         error: null,
       });
       if (key) await db.saveActivityCache(key, activity).catch(() => {});
+
+      // The rate only matters when figures are shown in dollars, and a missing
+      // quote simply leaves them in sats rather than showing a stale price.
+      if (settings.stableMode !== "off" && stableSupported(settings.network)) {
+        void get()
+          .quoteUnitsPerSat()
+          .then((r) => set({ unitsPerSat: r }))
+          .catch(() => set({ unitsPerSat: null }));
+      } else if (get().unitsPerSat !== null) {
+        set({ unitsPerSat: null });
+      }
     } catch (e) {
       set({ error: readableError(e) });
     } finally {
@@ -1215,21 +1237,53 @@ type SdkTransfer = Awaited<ReturnType<SparkWallet["getTransfers"]>>["transfers"]
 
 const SETTLED = new Set(["COMPLETED", "TRANSFER_STATUS_COMPLETED"]);
 
-function toActivity(t: SdkTransfer): CachedActivity {
+/**
+ * Transfer types the SDK uses for an AMM swap. PREIMAGE_SWAP and UTXO_SWAP are
+ * deliberately absent: they are a Lightning payment and an on-chain deposit
+ * claim, and the branches above catch them first.
+ */
+interface ActivityContext {
+  /** This wallet's own identity, so a self-transfer is not read as a payment. */
+  ownIdentity?: string;
+  /** Identities of the AMM pools this wallet swaps through. */
+  // ReadonlySet, because `Set` is shadowed by the store's own setter type below.
+  poolIds?: ReadonlySet<string>;
+}
+
+const AMM_SWAP_TYPES = new Set(["SWAP", "COUNTER_SWAP", "PRIMARY_SWAP_V3", "COUNTER_SWAP_V3"]);
+
+/**
+ * Turns one SDK transfer into an activity row.
+ *
+ * `context` is what tells a swap from a payment. A BTC/USD swap is, underneath,
+ * an ordinary Spark transfer to the pool, so without it every swap reads as
+ * "Sent" for the whole balance — money apparently leaving the wallet when it
+ * only changed denomination. Two independent signals are used, because either
+ * one alone can miss: the transfer type, and whether the counterparty is a pool
+ * this wallet swaps with. A transfer to the wallet's own identity is the SDK
+ * rearranging leaves, which is not a payment either.
+ */
+function toActivity(t: SdkTransfer, context: ActivityContext = {}): CachedActivity {
   const outgoing = t.transferDirection === "OUTGOING";
   const amount = outgoing ? t.valueSentByWallet : t.valueReceivedByWallet;
   const type = String(t.type ?? "").toUpperCase();
 
+  const party = outgoing
+    ? (t.receivers?.[0]?.identityPublicKey ?? t.receiverIdentityPublicKey)
+    : (t.senders?.[0]?.identityPublicKey ?? t.senderIdentityPublicKey);
+
   let kind: CachedActivity["kind"] = "spark";
+  let swapDirection: CachedActivity["swapDirection"];
   if (type.includes("LIGHTNING") || type.includes("PREIMAGE")) kind = "lightning";
   else if (type.includes("DEPOSIT") || type.includes("EXIT") || type.includes("UTXO"))
     kind = "onchain";
-  else if (!type) kind = "unknown";
-
-  // The counterparty: whoever is on the other end of this leg.
-  const counterparty = outgoing
-    ? (t.receivers?.[0]?.identityPublicKey ?? t.receiverIdentityPublicKey)
-    : (t.senders?.[0]?.identityPublicKey ?? t.senderIdentityPublicKey);
+  else if (AMM_SWAP_TYPES.has(type) || (party && context.poolIds?.has(party))) {
+    kind = "swap";
+    // Sats leaving for the pool bought USD; sats arriving sold it.
+    swapDirection = outgoing ? "toStable" : "toBitcoin";
+  } else if (party && context.ownIdentity && party === context.ownIdentity) {
+    kind = "internal";
+  } else if (!type) kind = "unknown";
 
   return {
     id: t.id,
@@ -1239,7 +1293,8 @@ function toActivity(t: SdkTransfer): CachedActivity {
     settled: SETTLED.has(String(t.status ?? "").toUpperCase()),
     time: (t.createdTime ?? t.updatedTime ?? new Date()).getTime(),
     kind,
-    counterparty: counterparty || undefined,
+    ...(swapDirection ? { swapDirection } : {}),
+    counterparty: party || undefined,
     updatedTime: t.updatedTime?.getTime() || undefined,
     // The SDK reports "no expiry" as epoch 0, not as a missing date.
     expiryTime: t.expiryTime?.getTime() || undefined,

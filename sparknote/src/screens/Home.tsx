@@ -3,7 +3,7 @@ import { depositClaimable, selectExitLocked, useWallet, type PendingDeposit } fr
 import { formatSats, relativeTime, truncateMiddle } from "../lib/format";
 import { describeDeposit, mergeActivity } from "../lib/activity";
 import { ClaimDeposit } from "./ClaimDeposit";
-import { formatUsd } from "../lib/stable";
+import { formatUsd, satsToUsdUnits } from "../lib/stable";
 import { Banner, CopyButton, Sheet } from "../components/ui";
 import { Receive } from "./Receive";
 import { Send } from "./Send";
@@ -31,12 +31,24 @@ export function Home() {
   const deposits = useWallet((s) => s.deposits);
   const stableMode = useWallet((s) => s.settings.stableMode);
   const usdbBalance = useWallet((s) => s.usdbUnits);
+  const unitsPerSat = useWallet((s) => s.unitsPerSat);
   const claimableDeposits = useMemo(() => deposits.filter(depositClaimable), [deposits]);
   const claimable = claimableDeposits.length;
 
   // Unclaimed deposits are not in the SDK's transfer list, so they are merged in
   // here rather than cached — a claimed one must not survive as a stale row.
   const rows = useMemo(() => mergeActivity(activity, deposits), [activity, deposits]);
+
+  /**
+   * In whole-balance mode the wallet is denominated in dollars, so figures read
+   * in dollars. Historic amounts are valued at today's rate, so they carry "≈";
+   * the sats are what actually moved and are still shown in the detail view.
+   */
+  const inUsd = stableMode === "whole" && unitsPerSat !== null;
+  const amountText = (sats: number, sign = "") =>
+    // The sign belongs inside the approximation, not before it: "≈−$0.01",
+    // never "−≈$0.01".
+    inUsd ? `≈${sign}${formatUsd(satsToUsdUnits(sats, unitsPerSat!))}` : `${sign}${formatSats(sats)}`;
 
   if (showBackup && mnemonic) {
     return <Backup mnemonic={mnemonic} onDone={() => setShowBackup(false)} />;
@@ -159,20 +171,24 @@ export function Home() {
               </button>
             ) : (
               <button className="tx" key={row.id} onClick={() => setDetail(row.tx)}>
-                <div className="tx-icon">{row.tx.direction === "in" ? "↓" : "↑"}</div>
+                <div className="tx-icon">{txIcon(row.tx)}</div>
                 <div className="tx-main">
-                  <div className="tx-title">
-                    {row.tx.memo || (row.tx.direction === "in" ? "Received" : "Sent")}
-                  </div>
+                  <div className="tx-title">{txTitle(row.tx)}</div>
                   <div className="tx-sub">
                     {!row.tx.settled && <span className="pending-dot" />}
                     {!row.tx.settled ? "pending · " : ""}
                     {kindLabel(row.tx.kind)} · {relativeTime(row.tx.time)}
                   </div>
                 </div>
-                <div className={`tx-amount ${row.tx.direction === "in" ? "in" : ""}`}>
-                  {row.tx.direction === "in" ? "+" : "−"}
-                  {formatSats(row.tx.amountSats)}
+                {/* A swap did not add or remove money, so it gets no + or −
+                    and no green: the balance is the same, in a different
+                    denomination. */}
+                <div
+                  className={`tx-amount ${row.tx.kind === "swap" || row.tx.kind === "internal" ? "" : row.tx.direction === "in" ? "in" : ""}`}
+                >
+                  {row.tx.kind === "swap" || row.tx.kind === "internal"
+                    ? amountText(row.tx.amountSats)
+                    : amountText(row.tx.amountSats, row.tx.direction === "in" ? "+" : "−")}
                 </div>
               </button>
             ),
@@ -308,6 +324,25 @@ function BalanceDisplay() {
   );
 }
 
+/** A swap moved value sideways, so it gets its own mark rather than an arrow. */
+function txIcon(tx: CachedActivity): string {
+  if (tx.kind === "swap") return "⇄";
+  if (tx.kind === "internal") return "↻";
+  return tx.direction === "in" ? "↓" : "↑";
+}
+
+function txTitle(tx: CachedActivity): string {
+  if (tx.memo) return tx.memo;
+  if (tx.kind === "swap") {
+    // Named by what the user did, not by the transfer underneath it.
+    return tx.swapDirection === "toBitcoin" ? "Swap · USD → BTC" : "Swap · BTC → USD";
+  }
+  // A transfer to the wallet's own identity is the SDK tidying leaves; calling
+  // it "Sent" implies money left, which it did not.
+  if (tx.kind === "internal") return "Rearranged leaves";
+  return tx.direction === "in" ? "Received" : "Sent";
+}
+
 function kindLabel(k: string): string {
   switch (k) {
     case "lightning":
@@ -316,6 +351,10 @@ function kindLabel(k: string): string {
       return "Spark";
     case "onchain":
       return "On-chain";
+    case "swap":
+      return "Swap";
+    case "internal":
+      return "Internal";
     default:
       return "Transfer";
   }

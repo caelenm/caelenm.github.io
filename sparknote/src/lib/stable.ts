@@ -76,6 +76,18 @@ export function formatUsd(units: bigint, decimals: number = USDB_DECIMALS): stri
   return `${negative ? "-" : ""}$${dollars.toLocaleString("en-US")}.${rem.toString().padStart(2, "0")}`;
 }
 
+/**
+ * Values sats in USD at a rate of `unitsPerSat`, for display only.
+ *
+ * Deliberately not used for anything that moves money. A past payment is being
+ * valued at today's price, which is an approximation and is marked as one
+ * wherever it is shown; the actual amount that moved was, and remains, the sats.
+ */
+export function satsToUsdUnits(sats: number, unitsPerSat: number): bigint {
+  if (!Number.isFinite(sats) || !Number.isFinite(unitsPerSat) || unitsPerSat <= 0) return 0n;
+  return BigInt(Math.max(0, Math.round(sats * unitsPerSat)));
+}
+
 export function withSlippage(amountOut: bigint, bps: number = DEFAULT_SLIPPAGE_BPS): bigint {
   return (amountOut * BigInt(10_000 - bps)) / 10_000n;
 }

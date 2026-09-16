@@ -20,6 +20,15 @@ import {
   type SwapProvider,
 } from "./stable.ts";
 
+/**
+ * Every pool this session has seen, by its LP public key.
+ *
+ * Swapping moves sats to a pool with an ordinary transfer, so without knowing
+ * which counterparties are pools the activity list reads a swap as a payment
+ * for the whole balance. Identifiers only — no amounts, nothing sensitive.
+ */
+export const knownPoolIds = new Set<string>();
+
 const MINIMUMS_TTL_MS = 10 * 60_000;
 const FALLBACK_MINIMUMS: SwapMinimums = { btcSats: 800n, usdbUnits: 500_000n };
 
@@ -83,6 +92,10 @@ export async function createFlashnetProvider(wallet: SparkWallet, network: Stabl
     if (!pairs.length) throw new Error("No liquid USDB/BTC pool is available right now.");
     pairs.sort((a, b) => Number(toBigInt(b.tvlAssetB) - toBigInt(a.tvlAssetB)));
     poolId = pairs[0].lpPublicKey;
+    // Recorded so the activity list can tell a swap from a payment: a swap is an
+    // ordinary Spark transfer whose counterparty happens to be a pool.
+    for (const p of seen.keys()) knownPoolIds.add(p);
+    knownPoolIds.add(poolId);
     return poolId;
   }
 
