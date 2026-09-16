@@ -1,4 +1,4 @@
-# nanospark security audit
+# sparknote security audit
 
 Full review of the wallet source, September 2026. Scope: everything under
 `src/`, `public/frame-guard.js`, `index.html`'s CSP, the build configuration

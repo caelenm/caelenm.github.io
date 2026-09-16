@@ -27,7 +27,7 @@
     if (guard && guard.parentNode) guard.parentNode.removeChild(guard);
     return;
   }
-  window.__nanosparkFramed = true;
+  window.__sparknoteFramed = true;
   try {
     window.top.location = window.self.location.href;
   } catch (e) {

@@ -31,7 +31,7 @@ export function Lock() {
   return (
     <div className="app">
       <div className="header">
-        <div className="brand">nanospark</div>
+        <div className="brand">sparknote</div>
       </div>
 
       <div style={{ paddingTop: 70 }}>

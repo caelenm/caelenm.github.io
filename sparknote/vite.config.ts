@@ -8,7 +8,7 @@ import wasm from "vite-plugin-wasm";
 // `vite dev` only. `vite build` and `vite preview` keep it verbatim.
 function stripCspInDev(): Plugin {
   return {
-    name: "nanospark:strip-csp-in-dev",
+    name: "sparknote:strip-csp-in-dev",
     apply: "serve",
     transformIndexHtml(html) {
       return html.replace(/\s*<meta\s+http-equiv="Content-Security-Policy"[\s\S]*?\/>/i, "");

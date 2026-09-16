@@ -37,7 +37,7 @@ function check(label: string, ok: boolean, detail = "") {
 }
 
 const mnemonic = process.env.REGTEST_MNEMONIC || generateMnemonic(wordlist);
-console.log("\n=== nanospark regtest end-to-end ===\n");
+console.log("\n=== sparknote regtest end-to-end ===\n");
 console.log(`mnemonic (throwaway): ${mnemonic}`);
 console.log("Re-run with REGTEST_MNEMONIC set to reuse this wallet.\n");
 

@@ -21,7 +21,7 @@ export function Onboarding() {
   return (
     <div className="app">
       <div className="header">
-        <div className="brand">nanospark</div>
+        <div className="brand">sparknote</div>
       </div>
 
       {step === "choose" && (

@@ -596,8 +596,12 @@ export const useWallet = create<State & Actions>((set, get) => ({
     if (mode === "whole") {
       await autoConvert(get, set);
     } else if (mode === "off" && previous !== "off" && get().usdbUnits > 0n) {
-      // "Off" means everything is bitcoin again.
-      await get().moveToBitcoin(get().usdbUnits);
+      // "Off" means everything is bitcoin again — including a balance too small
+      // for the pool to swap on its own, which moveToBitcoin would have quietly
+      // declined and left stranded. The sweep converts a little bitcoin in
+      // first when that is what it takes; if even that is impossible it reports
+      // why, and Home keeps showing the USD so it cannot go unnoticed.
+      await get().sweepStable();
     }
   },
 

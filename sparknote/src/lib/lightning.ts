@@ -68,8 +68,15 @@ export interface SendOutcome {
 
 /** The subset of the SDK's send results this module reads. */
 export interface SendResultLike {
+  /** The SSP's id for the request, used to ask it again later. */
+  id?: unknown;
   status?: unknown;
   paymentPreimage?: unknown;
+}
+
+/** The request id, when the result carries one worth polling on. */
+export function sendRequestId(result: SendResultLike | null | undefined): string | null {
+  return typeof result?.id === "string" && result.id.length > 0 ? result.id : null;
 }
 
 function hexToBytes(s: string): Uint8Array | null {
@@ -132,4 +139,59 @@ export function classifySend(result: SendResultLike | null | undefined, paymentH
   // status, or no status at all. All of these mean "not proven", and the only
   // safe reading of "not proven" is that the money is still in motion.
   return { state: "in-flight", status, preimage, refunded };
+}
+
+/**
+ * Follows an in-flight send until it resolves.
+ *
+ * `payLightningInvoice` returns as soon as the SSP accepts the request, long
+ * before anyone has been paid — the status is CREATED or
+ * LIGHTNING_PAYMENT_INITIATED and there is no preimage yet. Classifying that
+ * one snapshot is correct but not sufficient: without asking again, a payment
+ * that lands a second later is reported as still in flight for ever, which is
+ * exactly as misleading as a false success and was the bug this fixes.
+ *
+ * `fetchStatus` re-reads the request from the SSP. Polling stops the moment the
+ * outcome is proven either way, and gives up after `timeoutMs` — a send still
+ * unresolved by then is genuinely unresolved, and saying so beats guessing.
+ */
+export async function watchLightningSend(
+  fetchStatus: () => Promise<SendResultLike | null>,
+  paymentHashHex: string | undefined,
+  opts: {
+    timeoutMs?: number;
+    intervalMs?: number;
+    /** Called with each new outcome, so the UI can follow along. */
+    onUpdate?: (outcome: SendOutcome) => void;
+    sleep?: (ms: number) => Promise<void>;
+    now?: () => number;
+  } = {},
+): Promise<SendOutcome> {
+  const timeoutMs = opts.timeoutMs ?? 90_000;
+  const intervalMs = opts.intervalMs ?? 1_500;
+  const sleep = opts.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+  const now = opts.now ?? (() => Date.now());
+
+  const started = now();
+  let last: SendOutcome = { state: "in-flight", status: "", preimage: null, refunded: false };
+
+  while (now() - started < timeoutMs) {
+    await sleep(intervalMs);
+    let result: SendResultLike | null;
+    try {
+      result = await fetchStatus();
+    } catch {
+      // A failed poll says nothing about the payment. Keep waiting rather than
+      // inventing an outcome from a network error.
+      continue;
+    }
+    // Null means the SSP has no such request to report on right now; that is
+    // also not an outcome.
+    if (!result) continue;
+
+    last = classifySend(result, paymentHashHex);
+    opts.onUpdate?.(last);
+    if (last.state !== "in-flight") return last;
+  }
+  return last;
 }

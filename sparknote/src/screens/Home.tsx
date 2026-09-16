@@ -29,6 +29,8 @@ export function Home() {
   const exitRunning = useWallet(selectExitLocked);
   const exitArmed = useWallet((s) => !!s.exit.capture);
   const deposits = useWallet((s) => s.deposits);
+  const stableMode = useWallet((s) => s.settings.stableMode);
+  const usdbBalance = useWallet((s) => s.usdbUnits);
   const claimableDeposits = useMemo(() => deposits.filter(depositClaimable), [deposits]);
   const claimable = claimableDeposits.length;
 
@@ -47,7 +49,7 @@ export function Home() {
     <div className="app">
       <div className="header">
         <div className="brand">
-          nanospark
+          sparknote
           {network === "REGTEST" && <span className="net-badge">regtest</span>}
         </div>
         <button className="icon-btn" onClick={() => setSheet("settings")} aria-label="Settings">
@@ -73,6 +75,20 @@ export function Home() {
             : "A unilateral exit is in progress. Sending is paused so the leaves being exited are not spent."}{" "}
           <button className="link" onClick={() => setSheet("exit")}>
             {exitArmed ? "Open exit" : "View progress"}
+          </button>
+        </Banner>
+      )}
+
+      {/* Money the wallet holds must never be invisible. With the stable
+          balance off there is no USD figure and no currency switch, so a
+          balance the pool would not swap on the way out would otherwise vanish
+          from the screen entirely. */}
+      {stableMode === "off" && usdbBalance > 0n && (
+        <Banner>
+          {formatUsd(usdbBalance)} is still held as USD — it was too small for the pool to convert
+          back.{" "}
+          <button className="link" onClick={() => setSheet("settings")}>
+            Recover it
           </button>
         </Banner>
       )}

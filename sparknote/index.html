@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0c0d10" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+
+    <!--
+      Content Security Policy.
+
+      script-src is locked to this origin. There is no analytics, no error
+      reporting, no CDN font, no third-party script of any kind — a wallet page
+      should make no request the user cannot account for.
+
+      'wasm-unsafe-eval' is required by the Spark SDK's FROST signer, which
+      compiles WebAssembly locally. It does not permit eval() of JavaScript.
+
+      connect-src is the compromise. The Spark origins below are the complete
+      set the SDK talks to. The trailing `https:` exists only because sending to
+      a Lightning address means fetching from a host the recipient chooses,
+      which cannot be known ahead of time. Remove `https:` and LNURL sending
+      stops working, but every other feature keeps running against the named
+      origins — that is a supported configuration, and a stricter one.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'none';
+        script-src 'self' 'wasm-unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        font-src 'self';
+        media-src 'self' blob:;
+        worker-src 'self' blob:;
+        manifest-src 'self';
+        connect-src 'self' blob: data:
+          https://0.spark.lightspark.com
+          https://2.spark.flashnet.xyz
+          https://spark-operator.breez.technology
+          https://api.lightspark.com
+          https://mempool.space
+          https://regtest-mempool.us-west-2.sparkinfra.net
+          https://api.flashnet.xyz
+          https://api.amm.makebitcoingreatagain.dev
+          https:;
+        form-action 'none';
+        base-uri 'none';
+        object-src 'none';
+      "
+    />
+    <!--
+      Clickjacking. frame-ancestors cannot be delivered via <meta> (browsers
+      ignore it there), and static hosts like GitHub Pages cannot send headers.
+      So the page ships hidden and frame-guard.js reveals it only when it is the
+      top-level window. Framed by anyone, it stays blank. If your host can send
+      headers, also send:
+        Content-Security-Policy: frame-ancestors 'none'
+    -->
+    <style id="frame-guard">html{display:none!important}</style>
+    <script src="/frame-guard.js"></script>
+
+    <!--
+      Absolute (public-dir) paths, not "./…". A relative href makes Vite treat
+      these as build inputs and emit hashed copies under assets/, which breaks
+      the PWA icon: manifest.webmanifest points at "./icon.svg" relative to
+      itself, and there is no icon.svg inside assets/. Referenced this way they
+      are copied verbatim to the site root, and `base: "./"` rewrites them back
+      to "./icon.svg" in the built HTML.
+    -->
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>sparknote</title>
+    <script type="module" src="/src/main.tsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      This wallet is a JavaScript application — it generates and holds your keys in the browser, so
+      it cannot work without scripting enabled.
+    </noscript>
+  </body>
+</html>

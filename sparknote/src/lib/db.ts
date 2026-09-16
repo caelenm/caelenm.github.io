@@ -14,9 +14,17 @@
 import type { SealedBlob, Vault } from "./crypto";
 import { sealString, unsealString } from "./crypto";
 
-const DB_NAME = "nanospark";
-/** The app's previous name. Its database is moved across once, then deleted. */
-const LEGACY_DB_NAME = "sparklite";
+const DB_NAME = "sparknote";
+/**
+ * Databases from the app's previous names, newest first. The first one found
+ * holding a wallet is moved across once and then deleted.
+ *
+ * Renaming the app must never cost anyone their wallet, so every old name stays
+ * listed here — a wallet last opened two names ago is still found. IndexedDB is
+ * scoped to the origin rather than the path, so moving the app to a different
+ * folder on the same site does not affect any of this.
+ */
+const LEGACY_DB_NAMES = ["nanospark", "sparklite"] as const;
 const DB_VERSION = 1;
 const META = "meta";
 const CACHE = "cache";
@@ -93,11 +101,11 @@ function openNamed(name: string): Promise<IDBDatabase> {
  * does not exist would create it, so the upgrade that signals "new" is aborted,
  * which discards it again.
  */
-function openLegacyIfPresent(): Promise<IDBDatabase | null> {
+function openLegacyIfPresent(name: string): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     let req: IDBOpenDBRequest;
     try {
-      req = indexedDB.open(LEGACY_DB_NAME);
+      req = indexedDB.open(name);
     } catch {
       resolve(null);
       return;
@@ -138,12 +146,20 @@ async function migrateLegacy(db: IDBDatabase): Promise<void> {
   });
   if (hasVault) return;
 
-  const legacy = await openLegacyIfPresent();
-  if (!legacy) return;
+  // Oldest names last: the first database that actually holds a wallet wins.
+  for (const name of LEGACY_DB_NAMES) {
+    const legacy = await openLegacyIfPresent(name);
+    if (!legacy) continue;
+    if (await moveFrom(db, legacy, name)) return;
+  }
+}
+
+/** Copies one legacy database across. Returns true when a wallet was moved. */
+async function moveFrom(db: IDBDatabase, legacy: IDBDatabase, name: string): Promise<boolean> {
   try {
-    if (!legacy.objectStoreNames.contains(META) || !legacy.objectStoreNames.contains(CACHE)) return;
+    if (!legacy.objectStoreNames.contains(META) || !legacy.objectStoreNames.contains(CACHE)) return false;
     const [meta, cache] = await Promise.all([readAll(legacy, META), readAll(legacy, CACHE)]);
-    if (!meta.some((e) => e.key === "vault")) return;
+    if (!meta.some((e) => e.key === "vault")) return false;
     await new Promise<void>((resolve, reject) => {
       const t = db.transaction([META, CACHE], "readwrite");
       for (const e of meta) t.objectStore(META).put(e.value, e.key);
@@ -153,11 +169,14 @@ async function migrateLegacy(db: IDBDatabase): Promise<void> {
       t.onabort = () => reject(t.error ?? new Error("migration aborted"));
     });
   } catch {
-    return;
+    // A part-way failure leaves the old database untouched for the next load.
+    return false;
   } finally {
     legacy.close();
   }
-  indexedDB.deleteDatabase(LEGACY_DB_NAME);
+  // Only after the transaction above committed.
+  indexedDB.deleteDatabase(name);
+  return true;
 }
 
 function open(): Promise<IDBDatabase> {
@@ -389,7 +408,7 @@ export async function wipeEverything(): Promise<void> {
     dbPromise = null;
   }
   await deleteDb(DB_NAME);
-  // A leftover database under the old name would be migrated back in on the
+  // A leftover database under ANY old name would be migrated back in on the
   // next load, resurrecting the wallet that was just wiped.
-  await deleteDb(LEGACY_DB_NAME).catch(() => {});
+  for (const name of LEGACY_DB_NAMES) await deleteDb(name).catch(() => {});
 }

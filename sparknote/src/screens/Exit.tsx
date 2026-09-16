@@ -424,7 +424,7 @@ function BundleBuilder() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `nanospark-exit-bundle-${new Date(b.createdAt).toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
+    a.download = `sparknote-exit-bundle-${new Date(b.createdAt).toISOString().slice(0, 16).replace(/[:T]/g, "-")}.txt`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }

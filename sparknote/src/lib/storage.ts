@@ -43,10 +43,10 @@ async function probeIndexedDb(): Promise<boolean> {
       }
     };
     try {
-      const req = indexedDB.open("nanospark-probe");
+      const req = indexedDB.open("sparknote-probe");
       req.onsuccess = () => {
         req.result.close();
-        indexedDB.deleteDatabase("nanospark-probe");
+        indexedDB.deleteDatabase("sparknote-probe");
         done(true);
       };
       req.onerror = () => done(false);
