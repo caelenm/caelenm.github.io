@@ -6,6 +6,8 @@
 import {
   DEFAULT_SLIPPAGE_BPS,
   StableError,
+  planStableSweep,
+  sweepStableToBitcoin,
   convertToBitcoin,
   convertToStable,
   executeRebalance,
@@ -323,6 +325,121 @@ check(
   const plan = planRebalance("usd", 8_000_000n, current);
   const r = await executeRebalance(provider, plan, current);
   check("a deliberate remainder is not reported as change", r.status === "converted" ? r.change : "n/a", undefined);
+}
+
+
+// --- rescuing a USD balance too small for the pool ----------------------------
+// The reported bug: swap to USD, swap back, and a remainder under the pool's
+// minimum is left behind that no amount of adding bitcoin can shift.
+
+{
+  // $0.28 held, $0.50 minimum. This is the stuck state.
+  const { provider } = mockProvider();
+  const plan = await planStableSweep(provider, { usdbAvailable: 280_000n, btcAvailable: 1_000_000n });
+  check("a sub-minimum balance needs a top-up", plan.kind, "top-up");
+  if (plan.kind === "top-up") {
+    check("it names the shortfall", plan.shortfall, 220_000n);
+    check("and the minimum", plan.minimum, 500_000n);
+    check("the top-up clears the shortfall with headroom", plan.topUpSats >= 220n, true);
+  }
+}
+
+{
+  // Adding bitcoin to the WALLET does not help, which is the trap: the USD side
+  // is unchanged, so a plain conversion is still refused however much BTC there is.
+  const { provider } = mockProvider();
+  const r = await convertToBitcoin(provider, 280_000n, DEFAULT_SLIPPAGE_BPS, 280_000n);
+  check("a plain swap of the remainder is still refused", r.status === "skipped" ? r.reason : r.status, "below-minimum");
+}
+
+{
+  // The sweep is the way out: top up, then move everything.
+  const { provider, calls } = mockProvider();
+  const res = await sweepStableToBitcoin(provider, { usdbAvailable: 280_000n, btcAvailable: 1_000_000n });
+  check("the sweep converts", res.satsOut > 0n, true);
+  check("it topped up first", res.toppedUp !== null, true);
+  const swaps = calls.filter((c) => c.kind === "swap");
+  check("two swaps, in order", swaps.map((c) => c.direction), ["toStable", "toBitcoin"]);
+  check("the second swap spends the whole balance", swaps[1]?.amountIn, 280_000n + (res.toppedUp?.usdbOut ?? 0n));
+  check("which clears the minimum", (swaps[1]?.amountIn ?? 0n) >= 500_000n, true);
+}
+
+{
+  // A balance already over the minimum must not pay for a pointless extra swap.
+  const { provider, calls } = mockProvider();
+  const plan = await planStableSweep(provider, { usdbAvailable: 900_000n, btcAvailable: 1_000_000n });
+  check("a sufficient balance sweeps directly", plan.kind, "direct");
+  const res = await sweepStableToBitcoin(provider, { usdbAvailable: 900_000n, btcAvailable: 1_000_000n });
+  check("with no top-up", res.toppedUp, null);
+  check("in a single swap", calls.filter((c) => c.kind === "swap").length, 1);
+}
+
+{
+  // No bitcoin to fund the top-up: say so rather than pretend.
+  const { provider } = mockProvider();
+  const plan = await planStableSweep(provider, { usdbAvailable: 280_000n, btcAvailable: 0n });
+  check("with no bitcoin the balance is stuck", plan.kind, "stuck");
+  if (plan.kind === "stuck") check("and it explains why", plan.reason.length > 0, true);
+}
+
+{
+  // Bitcoin below the pool's own minimum cannot fund a top-up either.
+  const { provider } = mockProvider();
+  const plan = await planStableSweep(provider, { usdbAvailable: 280_000n, btcAvailable: 100n });
+  check("too little bitcoin is also stuck", plan.kind, "stuck");
+}
+
+{
+  const { provider } = mockProvider();
+  check("no USD means nothing to do", (await planStableSweep(provider, { usdbAvailable: 0n, btcAvailable: 1_000n })).kind, "nothing");
+}
+
+{
+  // The settled balance wins over the estimate, so the sweep moves what exists.
+  const { provider, calls } = mockProvider();
+  const res = await sweepStableToBitcoin(provider, {
+    usdbAvailable: 280_000n,
+    btcAvailable: 1_000_000n,
+    usdbAfterTopUp: async () => 5_000_000n,
+  });
+  const swaps = calls.filter((c) => c.kind === "swap");
+  check("the sweep uses the settled balance", swaps[1]?.amountIn, 5_000_000n);
+  check("and reports it", res.usdbIn, 5_000_000n);
+}
+
+{
+  // A lagging read must never shrink the sweep back under the minimum.
+  const { provider, calls } = mockProvider();
+  await sweepStableToBitcoin(provider, {
+    usdbAvailable: 280_000n,
+    btcAvailable: 1_000_000n,
+    usdbAfterTopUp: async () => 1n,
+  });
+  const swaps = calls.filter((c) => c.kind === "swap");
+  check("a stale balance read is ignored", (swaps[1]?.amountIn ?? 0n) >= 500_000n, true);
+}
+
+{
+  // Honest reporting: if the second leg fails the user must know their bitcoin
+  // is now in USD, and that retrying is what recovers it.
+  let n = 0;
+  const base = mockProvider();
+  const provider: SwapProvider = {
+    ...base.provider,
+    swap: async (direction, amountIn, minOut) => {
+      if (++n === 2) throw new Error("pool moved");
+      return base.provider.swap(direction, amountIn, minOut);
+    },
+  };
+  let msg = "";
+  try {
+    await sweepStableToBitcoin(provider, { usdbAvailable: 280_000n, btcAvailable: 1_000_000n });
+  } catch (e) {
+    msg = e instanceof StableError ? e.message : String(e);
+  }
+  check("it says bitcoin was converted first", /converted to USD first/i.test(msg), true);
+  check("it says the balance is larger now", /larger than before/i.test(msg), true);
+  check("and that retrying works", /try the sweep again/i.test(msg), true);
 }
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);

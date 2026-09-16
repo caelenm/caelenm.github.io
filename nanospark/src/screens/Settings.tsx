@@ -4,7 +4,7 @@ import { Confirm, Sheet, Spinner } from "../components/ui";
 import { Exit } from "./Exit";
 import { PROVENANCE } from "./Backup";
 import { formatSats } from "../lib/format";
-import { formatUsd, stableSupported } from "../lib/stable";
+import { formatUsd, stableSupported, type SweepPlan } from "../lib/stable";
 import { MIN_PASSPHRASE_LENGTH } from "../lib/crypto";
 import type { LeafLayout, StableMode } from "../lib/db";
 
@@ -409,6 +409,8 @@ function StableBalance({ onDone }: { onDone: () => void }) {
 
       {mode === "separate" && supported && <MixSlider locked={locked} />}
 
+      {supported && <StuckStable locked={locked} />}
+
       {(busy || stableBusy) && (
         <p className="muted center">
           <Spinner /> Converting…
@@ -457,6 +459,76 @@ const usdText = (units: number) => (Math.floor(units / 10_000) / 100).toFixed(2)
  * slider anchors whichever side is shrinking, so that swap is an exact spend.
  * Nothing converts until Confirm.
  */
+/**
+ * The way out of a USD balance the pool will not swap.
+ *
+ * Converting to USD and back leaves a remainder under the AMM's minimum, and
+ * from there the obvious remedy does not work: adding bitcoin to the wallet
+ * leaves the USD side unchanged, so "convert it all" is refused exactly as
+ * before and the balance looks permanently stuck.
+ *
+ * It is recoverable, just not in one step — a little bitcoin has to be
+ * converted *into* USD first so the total clears the minimum. That costs two
+ * swaps, so this says what it will do and what it will cost before doing it,
+ * and stays out of the way entirely when the balance is fine.
+ */
+function StuckStable({ locked }: { locked: boolean }) {
+  const usdbUnits = useWallet((s) => s.usdbUnits);
+  const balance = useWallet((s) => s.balance);
+  const planSweep = useWallet((s) => s.planStableSweep);
+  const sweepStable = useWallet((s) => s.sweepStable);
+  const [plan, setPlan] = useState<SweepPlan | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    if (usdbUnits <= 0n) {
+      setPlan(null);
+      return;
+    }
+    void planSweep().then((p) => alive && setPlan(p));
+    return () => {
+      alive = false;
+    };
+  }, [planSweep, usdbUnits, balance.available]);
+
+  // Only when the balance genuinely cannot be swapped on its own.
+  if (!plan || (plan.kind !== "top-up" && plan.kind !== "stuck")) return null;
+
+  return (
+    <div className="notice stark" style={{ marginTop: 12 }}>
+      <p style={{ marginTop: 0 }}>
+        Your {formatUsd(plan.usdbIn)} is below {formatUsd(plan.minimum)}, the smallest amount this
+        pool will swap, so it cannot be converted back to bitcoin on its own.
+      </p>
+      {plan.kind === "top-up" ? (
+        <>
+          <p className="muted" style={{ fontSize: 12.5 }}>
+            Adding bitcoin to the wallet will not fix it — a USD-to-bitcoin swap only looks at the
+            USD side. What works is converting about{" "}
+            <strong>{formatSats(Number(plan.topUpSats))} sats</strong> into USD first, so the total
+            clears the minimum, then moving the whole balance back. That is two swaps, and you pay
+            the pool's fee on both.
+          </p>
+          <button
+            className="btn primary"
+            style={{ width: "100%", marginTop: 8 }}
+            disabled={locked}
+            onClick={() => void sweepStable()}
+          >
+            Move all USD to bitcoin
+          </button>
+        </>
+      ) : (
+        <p className="muted" style={{ fontSize: 12.5 }}>
+          Recovering it means converting a little bitcoin into USD first so the total clears the
+          minimum, but this wallet does not have enough bitcoin to do that yet. {plan.reason} Add
+          some bitcoin and this option will appear here.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function MixSlider({ locked }: { locked: boolean }) {
   const balance = useWallet((s) => s.balance);
   const usdbUnits = useWallet((s) => s.usdbUnits);
