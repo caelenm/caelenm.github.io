@@ -442,5 +442,74 @@ check(
   check("and that retrying works", /try the sweep again/i.test(msg), true);
 }
 
+
+// --- waiting for the swap to settle before paying -----------------------------
+// The reported failure: paying a 100-sat invoice from a full USD balance
+// converted 661 sats and then failed with "Total target amount exceeds
+// available balance". The swap had not settled into spendable leaves yet.
+
+{
+  const { provider } = mockProvider();
+  const order: string[] = [];
+  await payFromStable(provider, {
+    neededSats: 203n,
+    btcAvailable: 0n,
+    usdbAvailable: 5_000_000n,
+    settle: async () => { order.push("settle"); },
+    pay: async () => { order.push("pay"); return "ok"; },
+  });
+  check("the wallet settles before paying", order, ["settle", "pay"]);
+}
+
+{
+  // The figure handed to settle must be what the payment needs, not the swap size.
+  const { provider } = mockProvider();
+  let asked = 0n;
+  await payFromStable(provider, {
+    neededSats: 203n,
+    btcAvailable: 0n,
+    usdbAvailable: 5_000_000n,
+    settle: async (min) => { asked = min; },
+    pay: async () => "ok",
+  });
+  check("settle is asked for the amount the payment needs", asked, 203n);
+}
+
+{
+  // No swap, no wait: a payment the bitcoin already covers must not be delayed.
+  const { provider } = mockProvider();
+  let settled = false;
+  await payFromStable(provider, {
+    neededSats: 100n,
+    btcAvailable: 5_000n,
+    usdbAvailable: 5_000_000n,
+    settle: async () => { settled = true; },
+    pay: async () => "ok",
+  });
+  check("no settle wait when nothing was swapped", settled, false);
+}
+
+{
+  // A settle that throws must not become the payment's failure.
+  const { provider } = mockProvider();
+  const { result } = await payFromStable(provider, {
+    neededSats: 203n,
+    btcAvailable: 0n,
+    usdbAvailable: 5_000_000n,
+    settle: async () => { throw new Error("balance read failed"); },
+    pay: async () => "ok",
+  });
+  check("a failing settle still lets the payment run", result, "ok");
+}
+
+{
+  // The clamp that produced 661: a tiny shortfall still swaps the pool minimum,
+  // which is why far more bitcoin arrives than the payment needs.
+  const { provider } = mockProvider();
+  const plan = await planPayFromStable(provider, { neededSats: 203n, btcAvailable: 0n, usdbAvailable: 5_000_000n });
+  check("a small shortfall is clamped up to the pool minimum", plan.swap?.usdbIn, 500_000n);
+  check("so the sats delivered exceed what is needed", (plan.swap?.minSatsOut ?? 0n) > 203n, true);
+}
+
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

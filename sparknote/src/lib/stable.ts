@@ -514,6 +514,17 @@ export async function payFromStable<T>(
     usdbAvailable: bigint;
     slippageBps?: number;
     pay: () => Promise<T>;
+    /**
+     * Waits until the swapped sats are actually spendable, after the swap and
+     * before the payment.
+     *
+     * The swap call returning does not mean the bitcoin is ready to spend: the
+     * operators still have to settle it into leaves the wallet can select. Pay
+     * in that gap and the SDK refuses with "Total target amount exceeds
+     * available balance", having converted the USD but sent nothing — which
+     * looks like the wallet cannot pay from a balance it visibly holds.
+     */
+    settle?: (minSats: bigint) => Promise<void>;
   },
 ): Promise<{ result: T; swapped: null | { usdbIn: bigint; satsOut: bigint } }> {
   const plan = await planPayFromStable(provider, args);
@@ -525,6 +536,15 @@ export async function payFromStable<T>(
       swapped = { usdbIn: plan.swap.usdbIn, satsOut: r.amountOut };
     } catch (e) {
       throw new StableError("swap-failed", `Could not convert USD to bitcoin: ${message(e)}`);
+    }
+  }
+
+  if (swapped && args.settle) {
+    // Its own failure is not the payment's failure; pay() reports for itself.
+    try {
+      await args.settle(args.neededSats);
+    } catch {
+      /* fall through and let the payment speak */
     }
   }
 
