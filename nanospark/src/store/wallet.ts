@@ -30,6 +30,9 @@ import {
   DEFAULT_SLIPPAGE_BPS,
   convertToBitcoin,
   convertToStable,
+  planStableSweep,
+  sweepStableToBitcoin,
+  type SweepPlan,
   executeRebalance,
   formatUsd,
   payFromStable,
@@ -172,6 +175,13 @@ interface Actions {
   setStableMode(mode: StableMode): Promise<void>;
   moveToStable(sats: number): Promise<ConvertResult>;
   moveToBitcoin(units: bigint): Promise<ConvertResult>;
+  /**
+   * What it would take to move the whole USD balance back to bitcoin, including
+   * whether bitcoin has to be converted in first to clear the pool's minimum.
+   */
+  planStableSweep(): Promise<SweepPlan | null>;
+  /** Moves the whole USD balance to bitcoin, topping up first when it is too small to swap. */
+  sweepStable(): Promise<boolean>;
   /**
    * Sets one side of the balance to an exact figure, converting the difference
    * from the other side. `target` is sats for "btc" and USDB units for "usd".
@@ -606,6 +616,51 @@ export const useWallet = create<State & Actions>((set, get) => ({
       const r: ConvertResult = { status: "failed", error: readableError(e) };
       set({ stableNote: describeConversion(r, "toStable", amount) });
       return r;
+    } finally {
+      set({ stableBusy: false });
+    }
+  },
+
+  async planStableSweep() {
+    const s = get();
+    if (!s.wallet) return null;
+    try {
+      const p = await swapProvider(s.wallet, s.settings.network);
+      return await planStableSweep(p, {
+        usdbAvailable: s.usdbUnits,
+        btcAvailable: BigInt(s.balance.available),
+      });
+    } catch {
+      return null;
+    }
+  },
+
+  async sweepStable() {
+    const s = get();
+    if (!s.wallet) return false;
+    set({ stableBusy: true });
+    try {
+      const p = await swapProvider(s.wallet, s.settings.network);
+      const r = await sweepStableToBitcoin(p, {
+        usdbAvailable: s.usdbUnits,
+        btcAvailable: BigInt(s.balance.available),
+        // The operators are authoritative for what the top-up actually produced.
+        usdbAfterTopUp: async () => {
+          await get().refresh();
+          return get().usdbUnits;
+        },
+      });
+      const topUp = r.toppedUp
+        ? ` ${r.toppedUp.sats.toLocaleString("en-US")} sats were converted to USD first so the balance cleared the pool's minimum.`
+        : "";
+      set({
+        stableNote: `Converted ${formatUsd(r.usdbIn)} to ${r.satsOut.toLocaleString("en-US")} sats.${topUp}`,
+      });
+      await get().refresh();
+      return true;
+    } catch (e) {
+      set({ stableNote: readableError(e) });
+      return false;
     } finally {
       set({ stableBusy: false });
     }

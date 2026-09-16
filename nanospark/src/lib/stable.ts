@@ -174,6 +174,164 @@ export function convertToBitcoin(
   return convert(provider, "toBitcoin", usdbUnits, bps, availableUnits);
 }
 
+/* ------------------------------------------------------------------ */
+/* Recovering a USD balance that is too small to swap                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The AMM refuses any swap below a published minimum, so a USD balance under
+ * that figure cannot be converted back to bitcoin at all. Converting to USD and
+ * back leaves exactly this: a remainder too small to move, stuck for good.
+ *
+ * It is a trap the obvious remedy does not spring. Adding bitcoin to the wallet
+ * changes nothing, because a USD to bitcoin swap only looks at the USD side —
+ * the remainder is still under the minimum. The only way out is to convert a
+ * little bitcoin *into* USD first, so the total clears the minimum, and then
+ * sweep the whole lot back.
+ *
+ * That is two swaps and two lots of fees to rescue a small amount, so it is
+ * never done automatically. The plan exists to be shown to the user, with its
+ * cost, before they decide the remainder is worth recovering.
+ */
+export type SweepPlan =
+  /** No USD to move. */
+  | { kind: "nothing" }
+  /** The balance already clears the minimum; one swap does it. */
+  | { kind: "direct"; usdbIn: bigint }
+  /** Under the minimum: bitcoin must be converted in first. */
+  | { kind: "top-up"; usdbIn: bigint; minimum: bigint; shortfall: bigint; topUpSats: bigint }
+  /** Under the minimum and the wallet cannot cover the top-up. */
+  | { kind: "stuck"; usdbIn: bigint; minimum: bigint; shortfall: bigint; reason: string };
+
+/**
+ * Headroom on the top-up, in hundredths of a percent.
+ *
+ * The two legs are separate swaps against a live pool. Buying exactly the
+ * shortfall risks landing a hair under the minimum if the price moves between
+ * them, which would strand the balance again — the precise failure being fixed.
+ */
+const TOP_UP_HEADROOM_BPS = 300n;
+
+export async function planStableSweep(
+  provider: SwapProvider,
+  args: { usdbAvailable: bigint; btcAvailable: bigint; slippageBps?: number },
+): Promise<SweepPlan> {
+  const { usdbAvailable, btcAvailable } = args;
+  const bps = args.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
+  if (usdbAvailable <= 0n) return { kind: "nothing" };
+
+  const minimum = (await provider.minimums()).usdbUnits;
+  if (usdbAvailable >= minimum) return { kind: "direct", usdbIn: usdbAvailable };
+
+  const shortfall = minimum - usdbAvailable;
+  const target = shortfall + (shortfall * TOP_UP_HEADROOM_BPS) / 10_000n + 1n;
+
+  try {
+    const { amountIn } = await amountInForOut(provider, "toStable", target, btcAvailable, bps);
+    return { kind: "top-up", usdbIn: usdbAvailable, minimum, shortfall, topUpSats: amountIn };
+  } catch (e) {
+    return {
+      kind: "stuck",
+      usdbIn: usdbAvailable,
+      minimum,
+      shortfall,
+      reason:
+        e instanceof StableError
+          ? e.message
+          : `There is not enough bitcoin to convert ${shortfall} USD units first.`,
+    };
+  }
+}
+
+export interface SweepResult {
+  /** USD converted to bitcoin in the final swap. */
+  usdbIn: bigint;
+  satsOut: bigint;
+  /** The first leg, when one was needed. Its cost is part of what this sweep took. */
+  toppedUp: null | { sats: bigint; usdbOut: bigint };
+}
+
+/**
+ * Moves the whole USD balance back to bitcoin, converting bitcoin in first if
+ * the balance is under the AMM's minimum.
+ *
+ * Not atomic, and it does not pretend to be. If the top-up succeeds and the
+ * sweep then fails, the error says so exactly: the USD balance went *up*, the
+ * bitcoin spent on the top-up is in USD now, and retrying is what recovers it.
+ * Reporting that plainly is worth more than a rollback that cannot be trusted.
+ */
+export async function sweepStableToBitcoin(
+  provider: SwapProvider,
+  args: {
+    usdbAvailable: bigint;
+    btcAvailable: bigint;
+    slippageBps?: number;
+    /**
+     * Reads the USD balance again after the top-up settles. The operators are
+     * authoritative; without this the second leg would swap an amount derived
+     * from a quote rather than from the balance that actually exists.
+     */
+    usdbAfterTopUp?: () => Promise<bigint>;
+  },
+): Promise<SweepResult> {
+  const bps = args.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
+  const plan = await planStableSweep(provider, args);
+
+  if (plan.kind === "nothing") throw new StableError("insufficient-stable", "There is no USD to convert.");
+  if (plan.kind === "stuck") throw new StableError("below-minimum", plan.reason);
+
+  let toppedUp: SweepResult["toppedUp"] = null;
+  let usdbIn = plan.usdbIn;
+
+  if (plan.kind === "top-up") {
+    let quoted: bigint;
+    try {
+      quoted = await provider.quote("toStable", plan.topUpSats);
+    } catch (e) {
+      throw new StableError("swap-failed", `Could not price the bitcoin to convert first: ${message(e)}`);
+    }
+    try {
+      const r = await provider.swap("toStable", plan.topUpSats, withSlippage(quoted, bps));
+      toppedUp = { sats: plan.topUpSats, usdbOut: r.amountOut };
+      usdbIn = plan.usdbIn + r.amountOut;
+    } catch (e) {
+      throw new StableError("swap-failed", `Could not convert bitcoin to USD first: ${message(e)}`);
+    }
+
+    if (args.usdbAfterTopUp) {
+      try {
+        const settled = await args.usdbAfterTopUp();
+        // Only trust it if it is at least what we expect; a lagging read must
+        // not shrink the sweep and re-strand the remainder.
+        if (settled >= usdbIn) usdbIn = settled;
+      } catch {
+        /* the estimate above stands */
+      }
+    }
+  }
+
+  const result = await convert(provider, "toBitcoin", usdbIn, bps, usdbIn);
+  if (result.status === "converted") {
+    return { usdbIn: result.amountIn, satsOut: result.amountOut, toppedUp };
+  }
+
+  const detail =
+    result.status === "failed"
+      ? result.error
+      : result.reason === "below-minimum"
+        ? "it is still below the smallest amount the pool will swap"
+        : (result.detail ?? result.reason);
+
+  if (toppedUp) {
+    throw new StableError(
+      "paid-after-swap-failed",
+      `${toppedUp.sats} sats were converted to USD first, but the sweep back then failed: ${detail}. ` +
+        `That bitcoin is in your USD balance now, which is larger than before — try the sweep again.`,
+    );
+  }
+  throw new StableError("swap-failed", `Could not convert USD to bitcoin: ${detail}`);
+}
+
 /**
  * The smallest input whose slippage-adjusted quote still yields at least
  * `targetOut`, in either direction.
