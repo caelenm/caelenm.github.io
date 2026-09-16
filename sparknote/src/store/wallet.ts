@@ -219,6 +219,36 @@ interface Actions {
 
 const EMPTY_BALANCE: Balance = { available: 0, owned: 0, incoming: 0 };
 
+/** How long to wait for swapped sats to become spendable before paying anyway. */
+const SETTLE_TIMEOUT_MS = 20_000;
+const SETTLE_POLL_MS = 500;
+
+/**
+ * Waits until the wallet can actually spend `minSats`.
+ *
+ * A swap returning is not the same as its output being spendable — the
+ * operators still have to settle it into selectable leaves. Paying in that gap
+ * fails with "Total target amount exceeds available balance" even though the
+ * USD was converted, which reads as the wallet refusing to spend money it
+ * plainly has.
+ *
+ * Gives up after SETTLE_TIMEOUT_MS and lets the payment proceed regardless: if
+ * the sats really have not landed the SDK says so, and that is a better outcome
+ * than blocking for ever on a balance that may never reach the figure.
+ */
+async function waitForSpendable(wallet: SparkWallet, minSats: bigint): Promise<void> {
+  const deadline = Date.now() + SETTLE_TIMEOUT_MS;
+  for (;;) {
+    try {
+      if (BigInt((await wallet.getBalance()).satsBalance.available) >= minSats) return;
+    } catch {
+      /* a failed read is not an answer; keep waiting until the deadline */
+    }
+    if (Date.now() >= deadline) return;
+    await new Promise((r) => setTimeout(r, SETTLE_POLL_MS));
+  }
+}
+
 /**
  * Claims confirmed deposits without asking, when the user has turned that on
  * and the SSP's fee is within the ceiling they set.
@@ -648,10 +678,18 @@ export const useWallet = create<State & Actions>((set, get) => ({
       const r = await sweepStableToBitcoin(p, {
         usdbAvailable: s.usdbUnits,
         btcAvailable: BigInt(s.balance.available),
-        // The operators are authoritative for what the top-up actually produced.
+        // The operators are authoritative for what the top-up actually
+        // produced — and, as with paying, the swap returning does not mean the
+        // USD has settled yet. Wait for it rather than sweeping a stale figure.
         usdbAfterTopUp: async () => {
-          await get().refresh();
-          return get().usdbUnits;
+          const expected = s.usdbUnits + 1n;
+          const deadline = Date.now() + SETTLE_TIMEOUT_MS;
+          for (;;) {
+            await get().refresh();
+            const now = get().usdbUnits;
+            if (now >= expected || Date.now() >= deadline) return now;
+            await new Promise((r) => setTimeout(r, SETTLE_POLL_MS));
+          }
         },
       });
       const topUp = r.toppedUp
@@ -758,6 +796,7 @@ export const useWallet = create<State & Actions>((set, get) => ({
         btcAvailable: BigInt(s.balance.available),
         usdbAvailable: s.usdbUnits,
         pay,
+        settle: (minSats) => waitForSpendable(s.wallet!, minSats),
       });
       if (swapped) {
         set({
