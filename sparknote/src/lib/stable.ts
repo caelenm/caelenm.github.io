@@ -83,6 +83,26 @@ export function formatUsd(units: bigint, decimals: number = USDB_DECIMALS): stri
  * valued at today's price, which is an approximation and is marked as one
  * wherever it is shown; the actual amount that moved was, and remains, the sats.
  */
+/** Parses typed dollars into USDB base units. Null for anything unparseable. */
+export function parseUsdUnits(text: string): number | null {
+  const t = text.replace(/[$,\s]/g, "");
+  if (!/^\d*(\.\d{0,6})?$/.test(t) || t === "" || t === ".") return null;
+  const [whole, frac = ""] = t.split(".");
+  return Number(whole || "0") * 10 ** USDB_DECIMALS + Number(frac.padEnd(6, "0"));
+}
+
+/**
+ * Converts a dollar figure to the sats it is worth, for an amount the user
+ * typed in dollars.
+ *
+ * Rounds down. The figure is a target, not a promise, and rounding up could put
+ * the amount over a balance or an invoice's ceiling that was checked in sats.
+ */
+export function usdUnitsToSats(units: number, unitsPerSat: number): number {
+  if (!Number.isFinite(units) || !Number.isFinite(unitsPerSat) || unitsPerSat <= 0) return 0;
+  return Math.max(0, Math.floor(units / unitsPerSat));
+}
+
 export function satsToUsdUnits(sats: number, unitsPerSat: number): bigint {
   if (!Number.isFinite(sats) || !Number.isFinite(unitsPerSat) || unitsPerSat <= 0) return 0n;
   return BigInt(Math.max(0, Math.round(sats * unitsPerSat)));
