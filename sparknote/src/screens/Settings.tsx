@@ -4,7 +4,7 @@ import { Confirm, Sheet, Spinner } from "../components/ui";
 import { Exit } from "./Exit";
 import { PROVENANCE } from "./Backup";
 import { formatSats } from "../lib/format";
-import { formatUsd, stableSupported, type SweepPlan } from "../lib/stable";
+import { formatUsd, parseUsdUnits, stableSupported, type SweepPlan } from "../lib/stable";
 import { MIN_PASSPHRASE_LENGTH } from "../lib/crypto";
 import type { LeafLayout, StableMode } from "../lib/db";
 
@@ -432,20 +432,12 @@ function StableBalance({ onDone }: { onDone: () => void }) {
 }
 
 const SLIDER_STEPS = 1000;
-const USD_UNITS = 1_000_000;
 
 function parseSats(text: string): number | null {
   const t = text.replace(/[,\s_]/g, "");
   if (!/^\d+$/.test(t)) return null;
   const n = Number(t);
   return Number.isSafeInteger(n) ? n : null;
-}
-
-function parseUsdUnits(text: string): number | null {
-  const t = text.replace(/[$,\s]/g, "");
-  if (!/^\d*(\.\d{0,6})?$/.test(t) || t === "" || t === ".") return null;
-  const [whole, frac = ""] = t.split(".");
-  return Number(whole || "0") * USD_UNITS + Number(frac.padEnd(6, "0"));
 }
 
 const usdText = (units: number) => (Math.floor(units / 10_000) / 100).toFixed(2);

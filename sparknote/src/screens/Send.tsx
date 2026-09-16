@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { selectExitLocked, useWallet } from "../store/wallet";
-import { Confirm, Sheet, Spinner } from "../components/ui";
+import { Confirm, SatoshiIcon, Sheet, Spinner } from "../components/ui";
 import { Scanner } from "../components/Scanner";
 import { Cooperative } from "./Exit";
 import { detect, describeDestination, type Destination } from "../lib/detect";
@@ -8,7 +8,7 @@ import { decodeInvoice, isExpired } from "../lib/bolt11";
 import { classifySend, sendRequestId, watchLightningSend } from "../lib/lightning";
 import { LnurlError, requestInvoice, resolvePayParams, type PayParams } from "../lib/lnurl";
 import { formatSats, readableError, truncateMiddle } from "../lib/format";
-import { StableError, formatUsd, satsToUsdUnits } from "../lib/stable";
+import { StableError, formatUsd, parseUsdUnits, satsToUsdUnits, usdUnitsToSats } from "../lib/stable";
 import type { Contact, ContactKind } from "../lib/db";
 
 /** Headroom over the SDK's estimate, so a small routing surprise doesn't fail the payment. */
@@ -645,6 +645,12 @@ function AmountStep({
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [maxNote, setMaxNote] = useState<string | null>(null);
+  /**
+   * Which unit the field is in. A wallet denominated in dollars opens in
+   * dollars; the toggle is offered either way, whenever there is a rate to
+   * convert with.
+   */
+  const [unit, setUnit] = useState<"sats" | "usd">(inUsd ? "usd" : "sats");
   /** "loading" until the USD quote answers; null if it could not be quoted. */
   const [extra, setExtra] = useState<number | null | "loading">(extraFromUsd ? "loading" : 0);
 
@@ -666,7 +672,40 @@ function AmountStep({
 
   const extraSats = typeof extra === "number" ? extra : 0;
   const spendable = max + extraSats;
-  const sats = Number(amount);
+
+  // Sats stay the source of truth whatever the field shows: the invoice, the
+  // fee and the payment are all denominated in sats, and every bound below is
+  // checked against them.
+  const canPriceUsd = unitsPerSat !== null && unitsPerSat > 0;
+  const typedUsdUnits = unit === "usd" ? parseUsdUnits(amount) : null;
+  const sats =
+    unit === "usd"
+      ? typedUsdUnits !== null && canPriceUsd
+        ? usdUnitsToSats(typedUsdUnits, unitsPerSat!)
+        : NaN
+      : Number(amount);
+
+  /**
+   * Keeps the figure the user already typed when the unit changes, rather than
+   * blanking it or — worse — leaving a sats figure sitting in a dollar field.
+   */
+  function switchUnit(next: "sats" | "usd") {
+    setMaxNote(null);
+    setUnit(next);
+    if (!canPriceUsd) return;
+    if (next === "usd") {
+      const current = Number(amount);
+      setAmount(
+        Number.isFinite(current) && current > 0
+          ? (Number(satsToUsdUnits(current, unitsPerSat!)) / 1_000_000).toFixed(2)
+          : "",
+      );
+    } else {
+      const units = parseUsdUnits(amount);
+      setAmount(units !== null && units > 0 ? String(usdUnitsToSats(units, unitsPerSat!)) : "");
+    }
+  }
+
   const min = lnurl?.minSats ?? 1;
   const ceiling = Math.min(spendable, lnurl?.maxSats ?? spendable);
   const valid = Number.isInteger(sats) && sats >= min && sats <= ceiling && sats > 0;
@@ -680,25 +719,36 @@ function AmountStep({
    * lowering the amount can only lower the fee. When the USD balance can cover
    * the payment, its bitcoin value is part of what is spendable.
    */
+  /** Writes a sats figure into the field in whatever unit it is showing. */
+  function setAmountSats(n: number) {
+    const safe = Math.max(0, Math.floor(n));
+    if (unit === "usd" && canPriceUsd) {
+      // Floored to the cent, so "Max" can never round above what is spendable.
+      setAmount((Math.floor(Number(satsToUsdUnits(safe, unitsPerSat!)) / 10_000) / 100).toFixed(2));
+    } else {
+      setAmount(String(safe));
+    }
+  }
+
   async function fillMax() {
     setBusy(true);
     setMaxNote(null);
     const fromUsd = extraSats > 0 ? ` Includes about ${formatSats(extraSats)} sats from your USD balance.` : "";
     try {
       if (dest.kind === "spark") {
-        setAmount(String(spendable));
+        setAmountSats(spendable);
         setMaxNote(`Spark transfers have no fee, so this is everything spendable.${fromUsd}`);
       } else if (dest.kind === "bolt11") {
         const est = await estimateFee(dest.raw, spendable);
         const reserve = feeCeiling(est);
-        setAmount(String(Math.max(0, spendable - reserve)));
+        setAmountSats(spendable - reserve);
         setMaxNote(`${formatSats(reserve)} sats held back for the routing fee.${fromUsd}`);
       } else {
         // LNURL: no invoice exists yet, so the fee cannot be estimated for real.
         // Hold back a conservative reserve and let the confirm screen show the
         // actual figure once the invoice comes back.
         const reserve = Math.max(5, Math.ceil(spendable * 0.005));
-        setAmount(String(Math.min(Math.max(0, spendable - reserve), ceiling)));
+        setAmountSats(Math.min(Math.max(0, spendable - reserve), ceiling));
         setMaxNote(
           `${formatSats(reserve)} sats held back for the routing fee — the exact fee is shown before you confirm.${fromUsd}`,
         );
@@ -713,8 +763,15 @@ function AmountStep({
   // invoice, the fee and the payment are all actually in, and converting the
   // input would quietly change what is sent.
   const usdFor = (n: number) =>
-    inUsd && Number.isFinite(n) && n > 0 ? `≈${formatUsd(satsToUsdUnits(n, unitsPerSat!))}` : null;
-  const amountInUsd = usdFor(sats);
+    canPriceUsd && Number.isFinite(n) && n > 0 ? `≈${formatUsd(satsToUsdUnits(n, unitsPerSat!))}` : null;
+  // The field shows one unit; this shows the same figure in the other, so the
+  // sats going out are never hidden behind a dollar amount.
+  const amountEcho =
+    !Number.isFinite(sats) || sats <= 0
+      ? null
+      : unit === "usd"
+        ? `${formatSats(sats)} sats`
+        : usdFor(sats);
 
   const spendableNote =
     extra === "loading"
@@ -733,32 +790,50 @@ function AmountStep({
             : "How much would you like to send?"}
       </p>
       <label className="field">
-        <span>
-          Amount in sats
+        <span className="amount-label">
+          {canPriceUsd && (
+            <button
+              type="button"
+              className="unit-toggle"
+              aria-label={unit === "sats" ? "Switch to entering US dollars" : "Switch to entering sats"}
+              title={unit === "sats" ? "Enter in USD instead" : "Enter in sats instead"}
+              onClick={(e) => {
+                // Inside a <label>, a click also activates the label's control,
+                // which fires this button a second time and toggles it straight
+                // back. Stop that before it undoes the switch.
+                e.preventDefault();
+                e.stopPropagation();
+                switchUnit(unit === "sats" ? "usd" : "sats");
+              }}
+            >
+              {unit === "sats" ? <SatoshiIcon size={15} /> : <span aria-hidden="true">$</span>}
+            </button>
+          )}
+          Amount in {unit === "sats" ? "sats" : "USD"}
           <button className="chip" disabled={busy || extra === "loading"} onClick={() => void fillMax()}>
             Max
           </button>
         </span>
         <input
-          type="number"
-          inputMode="numeric"
+          // Not type=number: dollars carry a decimal point and a currency the
+          // numeric spinner has no idea about.
+          type="text"
+          inputMode="decimal"
           autoFocus
-          min={min}
-          max={ceiling}
           value={amount}
-          placeholder="0"
+          placeholder={unit === "sats" ? "0" : "0.00"}
           onChange={(e) => {
             setAmount(e.target.value);
             setMaxNote(null);
           }}
         />
       </label>
-      {amountInUsd && (
+      {amountEcho && (
         <p className="muted" style={{ fontSize: 13, marginTop: -8, marginBottom: 4 }}>
-          {amountInUsd}
+          {amountEcho}
         </p>
       )}
-      <p className="muted" style={{ fontSize: 12.5, marginTop: amountInUsd ? 0 : -8 }}>
+      <p className="muted" style={{ fontSize: 12.5, marginTop: amountEcho ? 0 : -8 }}>
         {maxNote ?? spendableNote}
       </p>
       <div className="row" style={{ marginTop: 14 }}>

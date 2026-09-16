@@ -326,6 +326,49 @@ label.field > span {
   letter-spacing: 0.01em;
 }
 
+/*
+ * The amount label carries a currency toggle on the left. The default
+ * space-between would strand the wording in the middle, so the group is packed
+ * left and only "Max" is pushed to the right.
+ */
+label.field > span.amount-label {
+  justify-content: flex-start;
+  gap: 7px;
+}
+label.field > span.amount-label > button.chip {
+  margin-left: auto;
+}
+
+/* Tap target for switching between sats and dollars. */
+button.unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  cursor: pointer;
+  /* Widens the hit area on a touch screen without changing the visual size. */
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+button.unit-toggle:hover,
+button.unit-toggle:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+button.unit-toggle:active {
+  transform: scale(0.94);
+}
+
 /* ---------- cards, banners ---------- */
 
 .card {

@@ -161,3 +161,32 @@ export function Confirm({
 export function Spinner() {
   return <span className="spinner" />;
 }
+
+/**
+ * The satoshi symbol: three bars crossed by a stroke, leaning right.
+ *
+ * Drawn rather than shipped as an image so it inherits `currentColor` and the
+ * surrounding font size, and stays sharp at any density — it sits inline next
+ * to text, where a bitmap would look soft and fixed in colour.
+ */
+export function SatoshiIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      width={size}
+      height={size}
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+      style={{ display: "block" }}
+    >
+      <g transform="rotate(13 50 50)">
+        <rect x="44.5" y="6" width="11" height="17" />
+        <rect x="14" y="28" width="72" height="11" />
+        <rect x="14" y="44.5" width="72" height="11" />
+        <rect x="14" y="61" width="72" height="11" />
+        <rect x="44.5" y="77" width="11" height="17" />
+      </g>
+    </svg>
+  );
+}
