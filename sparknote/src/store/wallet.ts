@@ -43,7 +43,7 @@ import {
   type SwapDirection,
   type SwapProvider,
 } from "../lib/stable";
-import { createFlashnetProvider, knownPoolIds, usdbAvailable } from "../lib/flashnet";
+import { createFlashnetProvider, knownPoolIds, primePoolIds, usdbAvailable } from "../lib/flashnet";
 import {
   captureExitNodes,
   createEsplora,
@@ -58,7 +58,7 @@ import {
 } from "../lib/unilateral";
 import { captureFromNodes, planExit, signBundle, type ExitBundle, type ExitCapture, type ExitPlan } from "../lib/exitBundle";
 import { DEPOSIT_CONFIRMATIONS, depositOutput } from "../lib/deposits";
-import { autoClaimable } from "../lib/activity";
+import { autoClaimable, poolIdsIn, reconcileActivity } from "../lib/activity";
 
 export type Phase = "boot" | "welcome" | "locked" | "unlocked";
 
@@ -514,7 +514,10 @@ export const useWallet = create<State & Actions>((set, get) => ({
         ...(identity ? { ownIdentity: identity } : {}),
         poolIds: knownPoolIds,
       };
-      const activity = transfers.transfers.map((t) => toActivity(t, context));
+      const activity = reconcileActivity(
+        transfers.transfers.map((t) => toActivity(t, context)),
+        get().activity,
+      );
       set({
         balance: {
           available: Number(bal.satsBalance.available),
@@ -1152,6 +1155,9 @@ async function attach(set: Set, get: Get, mnemonic: string, key: CryptoKey): Pro
     db.loadExitCapture<ExitCapture>(key, network).catch(() => null),
   ]);
   set({ activity: cached, contacts });
+  // Before the first refresh, so past swaps are recognised as swaps on the very
+  // first render rather than after whatever later call happens to hit the AMM.
+  primePoolIds(poolIdsIn(cached));
 
   const armed = !!capture || (!!job && !job.finishedAt);
   const { wallet } = await SparkWallet.getOrCreateWallet({
@@ -1221,6 +1227,22 @@ async function attach(set: Set, get: Get, mnemonic: string, key: CryptoKey): Pro
   })();
 
   await get().refresh();
+
+  // A wallet restored on a new device has no activity cache to learn the pools
+  // from, so ask the AMM directly and re-read the list if that taught us
+  // anything. Best-effort in the background: the wallet works without it, and
+  // only the labelling of past swaps depends on it.
+  if (stableSupported(network)) {
+    void (async () => {
+      const before = knownPoolIds.size;
+      try {
+        await (await swapProvider(wallet, network)).warm?.();
+      } catch {
+        return;
+      }
+      if (knownPoolIds.size > before) await get().refresh();
+    })();
+  }
 
   void get().checkDeposits();
   depositTimer = setInterval(() => void get().checkDeposits(), DEPOSIT_POLL_MS);
