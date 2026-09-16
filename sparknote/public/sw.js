@@ -27,7 +27,7 @@ const OFFLINE_PAGE = `<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0c0d10" />
-    <title>nanospark — offline</title>
+    <title>sparknote — offline</title>
     <style>
       :root { color-scheme: dark; }
       body {
@@ -48,7 +48,7 @@ const OFFLINE_PAGE = `<!doctype html>
     <main>
       <h1>You're offline</h1>
       <p>
-        nanospark needs a connection — balances, payments and claims all come from the Spark
+        sparknote needs a connection — balances, payments and claims all come from the Spark
         operators, so there is nothing it can do offline. Your wallet is untouched.
       </p>
       <!-- A link, not a button: no inline script, so this renders under any CSP. -->

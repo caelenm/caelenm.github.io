@@ -808,7 +808,7 @@ export function renderBundleText(b: ExitBundle): string {
   L.push("");
   L.push("IF FEES RISE");
   L.push("------------");
-  L.push(`Fees are fixed at ${p.feeRate} sat/vB. If a step sits unconfirmed for hours, open nanospark -> Settings ->`);
+  L.push(`Fees are fixed at ${p.feeRate} sat/vB. If a step sits unconfirmed for hours, open sparknote -> Settings ->`);
   L.push("Exit to Bitcoin -> Unilateral and rebuild at a higher rate. The rebuilt bundle skips everything already");
   L.push("confirmed, and its version of the stuck step replaces the old one. It does not need the Spark operators.");
   L.push("");

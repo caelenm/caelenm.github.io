@@ -38,20 +38,20 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: nanospark/package-lock.json
-      - name: Install nanospark dependencies
-        working-directory: nanospark
+          cache-dependency-path: sparknote/package-lock.json
+      - name: Install sparknote dependencies
+        working-directory: sparknote
         run: npm ci
-      - name: Build nanospark
-        working-directory: nanospark
+      - name: Build sparknote
+        working-directory: sparknote
         run: npm run build
       - name: Stage site
         run: |
           set -euo pipefail
           mkdir -p _site
           rsync -a --delete --exclude '.git' --exclude '_site' --exclude 'node_modules' ./ _site/
-          rm -rf _site/nanospark
-          cp -r nanospark/dist _site/nanospark
+          rm -rf _site/sparknote
+          cp -r sparknote/dist _site/sparknote
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

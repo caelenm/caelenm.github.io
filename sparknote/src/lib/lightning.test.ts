@@ -9,7 +9,7 @@
  * user stop chasing a payment that never arrived.
  */
 import { sha256 } from "@noble/hashes/sha2.js";
-import { classifySend, verifyPreimage, type SendResultLike } from "./lightning.ts";
+import { classifySend, sendRequestId, verifyPreimage, watchLightningSend, type SendResultLike } from "./lightning.ts";
 
 let failures = 0;
 function check(label: string, actual: unknown, expected: unknown) {
@@ -145,6 +145,99 @@ const OTHER_HASH = toHex(sha256(new Uint8Array(32).fill(0xcd)));
     return o.state === "delivered" && o.refunded;
   });
   check("nothing is both delivered and refunded", contradiction, false);
+}
+
+
+/* --- following an in-flight send to its conclusion ------------------------- */
+// The reported bug: a payment that really arrived still read "still settling".
+// payLightningInvoice returns before anyone is paid, and nothing asked again.
+
+const noSleep = { sleep: async () => {}, intervalMs: 0 };
+
+{
+  check("an id is read from the result", sendRequestId({ id: "req_1" }), "req_1");
+  check("a missing id is null", sendRequestId({}), null);
+  check("an empty id is null", sendRequestId({ id: "" }), null);
+  check("a non-string id is null", sendRequestId({ id: 7 }), null);
+}
+
+{
+  // The exact sequence the SSP walks: accepted, in flight, then paid.
+  const seq: SendResultLike[] = [
+    { status: "CREATED" },
+    { status: "LIGHTNING_PAYMENT_INITIATED" },
+    { status: "LIGHTNING_PAYMENT_SUCCEEDED", paymentPreimage: PREIMAGE },
+  ];
+  let i = 0;
+  const seen: string[] = [];
+  const o = await watchLightningSend(async () => seq[i++] ?? seq[seq.length - 1]!, HASH, {
+    ...noSleep,
+    onUpdate: (u) => seen.push(u.state),
+  });
+  check("a send that lands is reported delivered", o.state, "delivered");
+  check("and proved by the preimage", o.preimage, true);
+  check("the UI saw it move", seen, ["in-flight", "in-flight", "delivered"]);
+  check("polling stopped once proven", i, 3);
+}
+
+{
+  const seq: SendResultLike[] = [{ status: "CREATED" }, { status: "LIGHTNING_PAYMENT_FAILED" }];
+  let i = 0;
+  const o = await watchLightningSend(async () => seq[Math.min(i++, 1)]!, HASH, noSleep);
+  check("a send that fails is reported failed", o.state, "failed");
+}
+
+{
+  const seq: SendResultLike[] = [{ status: "CREATED" }, { status: "USER_SWAP_RETURNED" }];
+  let i = 0;
+  const o = await watchLightningSend(async () => seq[Math.min(i++, 1)]!, HASH, noSleep);
+  check("a refunded send is failed", o.state, "failed");
+  check("and says the sats came back", o.refunded, true);
+}
+
+{
+  // Never resolves: give up and stay honest rather than guess either way.
+  let calls = 0;
+  let t = 0;
+  const o = await watchLightningSend(async () => { calls++; return { status: "CREATED" }; }, HASH, {
+    sleep: async () => { t += 1_000; },
+    intervalMs: 1_000,
+    timeoutMs: 5_000,
+    now: () => t,
+  });
+  check("an unresolved send times out as in-flight", o.state, "in-flight");
+  check("and stops polling", calls <= 6, true);
+}
+
+{
+  // A poll that throws says nothing about the payment; keep waiting.
+  let i = 0;
+  const o = await watchLightningSend(
+    async () => {
+      if (++i < 3) throw new Error("offline");
+      return { status: "TRANSFER_COMPLETED" };
+    },
+    HASH,
+    noSleep,
+  );
+  check("a failed poll does not end the watch", o.state, "delivered");
+}
+
+{
+  // Null means "nothing to report", not "failed".
+  let i = 0;
+  const o = await watchLightningSend(async () => (++i < 3 ? null : { status: "PREIMAGE_PROVIDED" }), HASH, noSleep);
+  check("a null poll does not end the watch", o.state, "delivered");
+}
+
+{
+  // The preimage check still governs while polling: a mismatch is never delivery.
+  const o = await watchLightningSend(
+    async () => ({ status: "LIGHTNING_PAYMENT_SUCCEEDED", paymentPreimage: PREIMAGE }),
+    OTHER_HASH,
+    noSleep,
+  );
+  check("a mismatched preimage while polling is failure", o.state, "failed");
 }
 
 console.log(failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`);

@@ -5,7 +5,7 @@ import { Scanner } from "../components/Scanner";
 import { Cooperative } from "./Exit";
 import { detect, describeDestination, type Destination } from "../lib/detect";
 import { decodeInvoice, isExpired } from "../lib/bolt11";
-import { classifySend } from "../lib/lightning";
+import { classifySend, sendRequestId, watchLightningSend } from "../lib/lightning";
 import { LnurlError, requestInvoice, resolvePayParams, type PayParams } from "../lib/lnurl";
 import { formatSats, readableError, truncateMiddle } from "../lib/format";
 import { StableError, formatUsd } from "../lib/stable";
@@ -189,6 +189,7 @@ export function Send({ onClose }: { onClose: () => void }) {
       // Whatever the send returns is the only evidence of what happened to the
       // money; it is classified rather than discarded.
       let outcome: ReturnType<typeof classifySend> | null = null;
+      let sendId: string | null = null;
       await withStableCover(
         plan.amountSats + plan.maxFeeSats,
         async () => {
@@ -198,6 +199,7 @@ export function Send({ onClose }: { onClose: () => void }) {
               maxFeeSats: plan.maxFeeSats,
             });
             outcome = classifySend(result, plan.target.paymentHash);
+            sendId = sendRequestId(result);
             // A send that is over and undelivered must not read as success. It
             // throws so the stable-cover wrapper can unwind with it.
             if (outcome.state === "failed") {
@@ -219,8 +221,34 @@ export function Send({ onClose }: { onClose: () => void }) {
       );
 
       // "in-flight" is not "done": the leaves have gone to the SSP but nobody
-      // has proved the receiver was paid, so say exactly that instead.
-      const settled = outcome as ReturnType<typeof classifySend> | null;
+      // has proved the receiver was paid.
+      let settled = outcome as ReturnType<typeof classifySend> | null;
+
+      // The SSP answers as soon as it accepts the request, which is before
+      // anyone has been paid — so ask it again until it knows. Without this a
+      // payment that lands a second later reads as "still settling" for ever.
+      if (settled && settled.state === "in-flight" && sendId && plan.target.kind === "bolt11") {
+        const id = sendId;
+        const hash = plan.target.paymentHash;
+        setStage({ s: "settling", amountSats: plan.amountSats, status: settled.status });
+        settled = await watchLightningSend(() => wallet.getLightningSendRequest(id), hash, {
+          onUpdate: (o) => setStage({ s: "settling", amountSats: plan.amountSats, status: o.status }),
+        });
+        void refresh();
+      }
+
+      if (settled && settled.state === "failed") {
+        setStage({
+          s: "error",
+          message: settled.refunded
+            ? "The Lightning payment did not go through, and the sats have been returned."
+            : "The Lightning payment did not reach the receiver.",
+          afterAttempt: true,
+        });
+        void refresh();
+        return;
+      }
+
       setStage(
         settled && settled.state === "in-flight"
           ? { s: "settling", amountSats: plan.amountSats, status: settled.status }
