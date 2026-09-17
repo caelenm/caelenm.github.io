@@ -1,1 +1,19 @@
-{"status":"OK","tag":"payRequest","commentAllowed":255,"callback":"https://names.coinos.io/lnurlp/cjm/cb?domain=coinos.io","metadata":"[[\"text/identifier\",\"pay@caelen.ca\"],[\"text/plain\",\"paying off-chain\"]]","minSendable":1000,"maxSendable":25000000000,"payerData":{"name":{"mandatory":false},"email":{"mandatory":false},"pubkey":{"mandatory":false}},"allowsNostr":false}
+{
+  "tag": "payRequest",
+  "commentAllowed": 255,
+  "callback": "https://lite--main.caelenm.deno.net/lnurlp/pay/callback",
+  "minSendable": 1000,
+  "maxSendable": 10000000000,
+  "metadata": "[[\"text/identifier\",\"pay@caelen.ca\"],[\"text/plain\",\"Sats for pay\"]]",
+  "payerData": {
+    "name": {
+      "mandatory": false
+    },
+    "email": {
+      "mandatory": false
+    },
+    "pubkey": {
+      "mandatory": false
+    }
+  }
+}
