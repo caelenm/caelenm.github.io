@@ -44,6 +44,7 @@ Both feed a binary search (`maxChars`) that determines exactly how many characte
 - **Bit-exact by construction.** Every optional transformation (compression, image re-encoding, PDF flattening) either round-trips exactly or is skipped; the receiver's CRC32 check is the final word.
 - **Self-numbering chunks over strict ordering.** Nothing about the protocol assumes codes arrive in sequence, are shown once, or are all scanned in one sitting — which is what makes the missing-frames back-channel (and, as discussed below, a printed/paper version) possible without extra protocol changes.
 - **Text has a fast path.** A short text snippet that fits in a single code is sent as the raw text itself — no framing, no base44 — so it reads on literally any QR scanner, not just this page.
+- **Structured codes.** In text mode, buttons under the text box swap it for a form that builds a code a phone camera acts on: a website URL, a vCard 3.0 contact, a `WIFI:` network, a `geo:` location, an iCalendar `VEVENT` (times converted to UTC) or a BIP 21 `bitcoin:` link (address checksum verified offline, optional amount). These are always one bare code, up to QR version 40 regardless of the preset, because splitting them into QZ1 slices would leave a camera nothing it could open.
 
 ## File layout
 

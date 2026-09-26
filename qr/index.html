@@ -68,7 +68,7 @@ input[type=file]{display:none}
 .readout b{font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;text-align:right}
 
 /* ---------- controls ---------- */
-select,input[type=text],input[type=url],textarea{
+select,input[type=text],input[type=url],input[type=email],input[type=tel],input[type=date],input[type=datetime-local],textarea{
   width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line2);
   border-radius:8px;padding:9px 10px;font-family:var(--mono);font-size:13px;
 }
@@ -141,6 +141,32 @@ details .field .label{margin-bottom:6px}
 .linkish:hover{color:var(--amber)}
 .linkish:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
 #text-input{min-height:168px}
+/* structured codes (Wi-Fi, vCard, …): type chips under the text box, and the form that replaces it */
+.qtypes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.qtypes[hidden]{display:none}
+.qtypes button{
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--panel2);color:var(--muted);border:1px solid var(--line2);border-radius:999px;
+  padding:6px 11px;cursor:pointer;
+}
+.qtypes button:hover{border-color:var(--amber);color:var(--amber)}
+.qtypes button[aria-pressed="true"]{background:var(--amber);color:#16130A;border-color:var(--amber);font-weight:600}
+.qtypes button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.qform{display:flex;flex-direction:column;gap:10px}
+.qform[hidden]{display:none}
+.qform .field{display:block;margin:0}
+.qform .field[hidden]{display:none}
+.qform .label{margin-bottom:6px}
+.qform textarea{min-height:72px}
+.qform input{color-scheme:dark}
+.qform .hint{margin:0}
+.qpair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qpair[hidden]{display:none}
+@media (max-width:380px){.qpair{grid-template-columns:1fr}}
+.qamt{display:flex;gap:8px}
+.qamt input{flex:1 1 auto;min-width:0}
+.qamt select{flex:0 0 92px;width:92px}
+.qform .dscheck{margin-top:0}
 input[type=range]{width:100%;accent-color:var(--amber);background:transparent;border:0;padding:0;margin:0}
 .dscheck{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text);margin-top:14px}
 .dscheck input{accent-color:var(--amber);width:16px;height:16px;margin:0;cursor:pointer}
@@ -273,6 +299,110 @@ footer{margin:26px 0 0;font-size:12px;color:var(--muted);font-family:var(--mono)
         <button class="linkish" id="mode-toggle">share text</button>
       </div>
       <textarea id="text-input" hidden placeholder="Paste or type the text to send…" spellcheck="false" autocomplete="off"></textarea>
+      <div id="qforms">
+        <div class="qform" data-kind="url" hidden>
+          <label class="field"><span class="label">Website URL</span>
+            <input type="url" id="q-url" placeholder="https://example.com" spellcheck="false" autocomplete="off" autocapitalize="off"></label>
+          <p class="hint">No https:// needed — it's added for you.</p>
+        </div>
+        <div class="qform" data-kind="vcard" hidden>
+          <div class="qpair">
+            <label class="field"><span class="label">First name</span>
+              <input type="text" id="q-vc-first" autocomplete="off"></label>
+            <label class="field"><span class="label">Last name</span>
+              <input type="text" id="q-vc-last" autocomplete="off"></label>
+          </div>
+          <div class="qpair">
+            <label class="field"><span class="label">Mobile phone</span>
+              <input type="tel" id="q-vc-phone" placeholder="+1 902 555 0123" autocomplete="off"></label>
+            <label class="field"><span class="label">Email</span>
+              <input type="email" id="q-vc-email" spellcheck="false" autocomplete="off" autocapitalize="off"></label>
+          </div>
+          <div class="qpair">
+            <label class="field"><span class="label">Organization</span>
+              <input type="text" id="q-vc-org" autocomplete="off"></label>
+            <label class="field"><span class="label">Job title</span>
+              <input type="text" id="q-vc-title" autocomplete="off"></label>
+          </div>
+          <label class="field"><span class="label">Website</span>
+            <input type="url" id="q-vc-url" placeholder="example.com" spellcheck="false" autocomplete="off" autocapitalize="off"></label>
+          <label class="field"><span class="label">Note</span>
+            <textarea id="q-vc-note" autocomplete="off"></textarea></label>
+          <p class="hint">A first or last name is required; everything else is optional.</p>
+        </div>
+        <div class="qform" data-kind="wifi" hidden>
+          <label class="field"><span class="label">Network name (SSID)</span>
+            <input type="text" id="q-wf-ssid" spellcheck="false" autocomplete="off" autocapitalize="off"></label>
+          <label class="field"><span class="label">Security</span>
+            <select id="q-wf-sec">
+              <option value="WPA" selected>WPA / WPA2 / WPA3</option>
+              <option value="WEP">WEP</option>
+              <option value="nopass">None — open network</option>
+            </select></label>
+          <label class="field" id="q-wf-pass-field"><span class="label">Password</span>
+            <input type="text" id="q-wf-pass" spellcheck="false" autocomplete="off" autocapitalize="off"></label>
+          <label class="dscheck" for="q-wf-hidden">
+            <input type="checkbox" id="q-wf-hidden">
+            <span>Hidden network <span class="sub">Tick only if the network doesn't broadcast its name.</span></span>
+          </label>
+          <p class="hint">Name and password are case-sensitive and shown in full, so check them before you share.</p>
+        </div>
+        <div class="qform" data-kind="geo" hidden>
+          <div class="qpair">
+            <label class="field"><span class="label">Latitude</span>
+              <input type="text" id="q-geo-lat" inputmode="decimal" placeholder="45.6186" spellcheck="false" autocomplete="off"></label>
+            <label class="field"><span class="label">Longitude</span>
+              <input type="text" id="q-geo-lng" inputmode="decimal" placeholder="-61.9930" spellcheck="false" autocomplete="off"></label>
+          </div>
+          <p class="hint">Decimal degrees; south and west are negative. Pasting "lat, long" (as copied from a map) into either box fills both.</p>
+        </div>
+        <div class="qform" data-kind="event" hidden>
+          <label class="field"><span class="label">Event title</span>
+            <input type="text" id="q-ev-title" autocomplete="off"></label>
+          <label class="dscheck" for="q-ev-allday">
+            <input type="checkbox" id="q-ev-allday">
+            <span>All day</span>
+          </label>
+          <div class="qpair" id="q-ev-times">
+            <label class="field"><span class="label">Starts</span>
+              <input type="datetime-local" id="q-ev-start"></label>
+            <label class="field"><span class="label">Ends · optional</span>
+              <input type="datetime-local" id="q-ev-end"></label>
+          </div>
+          <div class="qpair" id="q-ev-days" hidden>
+            <label class="field"><span class="label">First day</span>
+              <input type="date" id="q-ev-sday"></label>
+            <label class="field"><span class="label">Last day · optional</span>
+              <input type="date" id="q-ev-eday"></label>
+          </div>
+          <label class="field"><span class="label">Location · optional</span>
+            <input type="text" id="q-ev-loc" autocomplete="off"></label>
+          <label class="field"><span class="label">Description · optional</span>
+            <textarea id="q-ev-desc" autocomplete="off"></textarea></label>
+          <p class="hint" id="q-ev-tz"></p>
+        </div>
+        <div class="qform" data-kind="btc" hidden>
+          <label class="field"><span class="label">Bitcoin address</span>
+            <input type="text" id="q-btc-addr" placeholder="bc1q…" spellcheck="false" autocomplete="off" autocapitalize="off"></label>
+          <label class="field"><span class="label">Amount · optional</span>
+            <span class="qamt">
+              <input type="text" id="q-btc-amt" inputmode="decimal" spellcheck="false" autocomplete="off">
+              <select id="q-btc-unit" aria-label="Amount unit">
+                <option value="btc" selected>BTC</option>
+                <option value="sat">sats</option>
+              </select>
+            </span></label>
+          <p class="hint">The address checksum is verified, so a typo can't become a code. Wallets open it with the amount filled in.</p>
+        </div>
+      </div>
+      <div class="qtypes" id="qtypes" role="group" aria-label="Code type" hidden>
+        <button type="button" data-kind="url" aria-pressed="false">Website URL</button>
+        <button type="button" data-kind="vcard" aria-pressed="false">vCard</button>
+        <button type="button" data-kind="wifi" aria-pressed="false">Wi-Fi</button>
+        <button type="button" data-kind="geo" aria-pressed="false">Location / map</button>
+        <button type="button" data-kind="event" aria-pressed="false">Calendar / event</button>
+        <button type="button" data-kind="btc" aria-pressed="false">Bitcoin address</button>
+      </div>
       <div id="drop" tabindex="0" role="button">
         <strong>Drop a file here</strong>
         <span>or click to browse · paste with Ctrl/Cmd-V · several files become one zip</span>
@@ -1206,6 +1336,8 @@ function settings(){
   var p = $("preset").value.split(","), ver = parseInt(p[0], 10), ecc = $("ecc").value;
   return {ver:ver, ecc:ecc};
 }
+// the largest version the codes on show may use: the preset's, unless showRaw() set its own
+function codeVer(){ return (S.raw && S.rawVer) || settings().ver; }
 function newSid(){
   var s = "", pool = "ABCDEFGHIJKLMNPQRSTUVWXYZ23456789";
   var r = new Uint8Array(4); (crypto && crypto.getRandomValues) ? crypto.getRandomValues(r) : (r[0]=Math.random()*255,r[1]=Math.random()*255,r[2]=Math.random()*255,r[3]=Math.random()*255);
@@ -1218,16 +1350,23 @@ function tryRawText(){
   if (!textMode || !S.text) return false;
   var st = settings();
   try { encodeAt(S.text, ECCMAP[st.ecc], st.ver); } catch(e){ return false; }   // throws if too big
+  showRaw(S.text, st.ver, null);
+  return true;
+}
+// One bare code holding `text` as-is, drawn no larger than version `maxVer`. `kind` names a
+// structured payload (Wi-Fi, vCard, …) — those may use any version up to 40, since splitting
+// one across QZ1 codes would leave a phone's camera nothing it could act on.
+function showRaw(text, maxVer, kind){
   S.raw = true; S.container = null; S.items = []; S.name = null; S.sid = null;
-  S.codes = [S.text];
-  S.textBytes = fflate.strToU8(S.text).length;
+  S.rawVer = maxVer; S.kind = kind;
+  S.codes = [text];
+  S.textBytes = fflate.strToU8(text).length;
   S.idx = 0; S.cache = {}; S.cacheKeys = [];
   updateLossyUI(); renderLossyReport(); updatePdfUI(); renderPdfReport();
   paintSend(); readout();
-  return true;
 }
 function buildCodes(){
-  S.raw = false;
+  S.raw = false; S.kind = null;
   S.cache = {}; S.cacheKeys = [];
   S.loopDone = false; S.only = null;
   if ($("only-note")) $("only-note").hidden = true;
@@ -1258,7 +1397,7 @@ function paintSend(){
   var n = S.codes.length;
   setText($("c-now"), n ? pad2(S.idx+1) : "00");
   setText($("c-of"), "/ " + (n ? pad2(n) : "00"));
-  setText($("c-stat"), n ? (S.name || "text snippet") : "no file loaded");
+  setText($("c-stat"), n ? printFilename() : "no file loaded");
   $("prev").disabled = !n || S.idx === 0;
   $("next").disabled = !n || (S.idx >= n-1 && rate() === 0);
   $("next").textContent = (n && S.idx >= n-1 && rate() === 0) ? "Last code" : "Next code →";
@@ -1288,24 +1427,25 @@ function paintSend(){
 
   var sheet = $("sheet");
   if (!n){ sheet.className = "sheet empty"; setText(sheet, "Pick a file and the codes appear here, one at a time."); return; }
-  var st = settings();
-  var key = S.idx + "|" + st.ver + st.ecc + (S.raw ? "|raw" : "");
+  var st = settings(), ver = codeVer();
+  var key = S.idx + "|" + ver + st.ecc + (S.raw ? "|raw" : "");
   if (S.cacheKeys && S.cacheKeys.length > 60){ S.cache = {}; S.cacheKeys = []; }
   (S.cacheKeys || (S.cacheKeys = [])).push(key);
-  if (!S.cache[key]) S.cache[key] = svgFor(S.codes[S.idx], ECCMAP[st.ecc], st.ver, 4);
+  if (!S.cache[key]) S.cache[key] = svgFor(S.codes[S.idx], ECCMAP[st.ecc], ver, 4);
   sheet.className = "sheet";
   sheet.innerHTML = S.cache[key];
 }
 function readout(){
   if (S.raw){
+    var qk = S.kind ? QKINDS[S.kind] : null;
     $("readout").hidden = false;
-    setText($("r-name"), "text snippet");
+    setText($("r-name"), printFilename());
     setText($("r-orig"), bytes(S.textBytes));
-    setText($("r-comp"), "sent as plain text · no wrapper");
+    setText($("r-comp"), qk ? qk.format + " · no wrapper" : "sent as plain text · no wrapper");
     setText($("r-per"), "—");
     setText($("r-codes"), "1");
     var el0 = $("send-status"); el0.className = "status ok";
-    setText(el0, "Ready. This is an ordinary QR code — any reader will show the text as it is.");
+    setText(el0, qk ? qk.ready : "Ready. This is an ordinary QR code — any reader will show the text as it is.");
     return;
   }
   if (!S.container){ $("readout").hidden = true; return; }
@@ -1381,29 +1521,49 @@ function loadFiles(list){
    empty. That costs nothing (a zero-length name is already legal) and tells the receiving
    side to hand over the text itself rather than offering a download.                      */
 var textMode = false, textTimer = null;
+var qKind = null;           // structured type picked under the text box (QKINDS key), or null for plain text
 
 function clearPayload(){
   S.items = []; S.proc = {}; S.container = null; S.data = null; S.codes = []; S.name = null;
-  S.raw = false; S.text = null; S.cache = {}; S.cacheKeys = [];
+  S.raw = false; S.rawVer = null; S.kind = null; S.text = null; S.cache = {}; S.cacheKeys = [];
   updateLossyUI(); renderLossyReport(); updatePdfUI(); renderPdfReport();
   $("readout").hidden = true;
   var el = $("send-status"); el.className = "status"; setText(el, "");
   paintSend();
 }
 
+// text box, type chips and the chosen type's form — which of them show for the current state
+function showTextUI(){
+  $("text-input").hidden = !textMode || !!qKind;
+  $("qtypes").hidden = !textMode;
+  Array.prototype.forEach.call(document.querySelectorAll("#qforms .qform"), function(f){
+    f.hidden = !(textMode && f.dataset.kind === qKind);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#qtypes button"), function(b){
+    b.setAttribute("aria-pressed", b.dataset.kind === qKind ? "true" : "false");
+  });
+}
+function focusTextInput(){
+  var f = qKind ? document.querySelector('#qforms .qform[data-kind="' + qKind + '"]') : null;
+  var el = f ? f.querySelector("input, select, textarea") : $("text-input");
+  if (el) el.focus();
+}
+
 function setTextMode(on){
   textMode = !!on;
-  $("text-input").hidden = !textMode;
   $("drop").hidden = textMode;
   $("mode-toggle").textContent = textMode ? "share a file" : "share text";
+  showTextUI();
   clearPayload();                                   // always repaints, so the panel never shows a stale code
   if (textMode){
-    $("text-input").focus();
-    if ($("text-input").value) loadText();          // coming back to text you'd already typed
+    focusTextInput();
+    if (qKind || $("text-input").value) loadText(); // coming back to text you'd already typed
   }
 }
 
 function loadText(){
+  if (!textMode) return;                         // a debounced call can land after switching to files
+  if (qKind){ loadStructured(); return; }
   var t = $("text-input").value;
   if (!t){ clearPayload(); return; }
   S.text = t;
@@ -1419,6 +1579,380 @@ $("text-input").addEventListener("input", function(){
   if (textTimer) clearTimeout(textTimer);
   textTimer = setTimeout(loadText, 400);
 });
+
+/* ---------------- structured codes ----------------
+   Wi-Fi, contacts, events, … are just text in a format phone cameras recognise. Each builder
+   reads its form and returns {text} when the form is complete and valid, {need} for a gentle
+   prompt while it's still being filled in, or {err} when something entered can't be encoded.
+   The result is always ONE bare code (see showRaw) — never QZ1 slices, which no camera acts on. */
+function qv(id){ return $(id).value; }
+function qt(id){ return $(id).value.trim(); }
+function utf8Len(s){ return fflate.strToU8(s).length; }
+// RFC 2426 (vCard 3.0) and RFC 5545 (iCalendar) escape text values the same way
+function txtEsc(s){
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r\n|\r|\n/g, "\\n");
+}
+// the MECARD-style escaping the WIFI: format uses (as Android's own "share Wi-Fi" code does)
+function wifiEsc(s){ return s.replace(/([\\;,:"])/g, "\\$1"); }
+
+function normUrl(v){
+  v = v.trim();
+  if (!v) return {};
+  var bad = {err:"That doesn't look like a web address."};
+  if (/\s/.test(v)) return {err:"A web address can't contain spaces."};
+  if (!/^https?:\/\//i.test(v)){
+    if (/^[a-z][a-z0-9+.\-]*:\/\//i.test(v)) return {err:"Only http:// and https:// links are supported."};
+    v = "https://" + v;
+  }
+  var u;
+  try { u = new URL(v); } catch(e){ return bad; }
+  var h = u.hostname;
+  if (u.username || u.password) return bad;                    // "mailto:a@b.c" would parse as user@host
+  if (!(h === "localhost" || h.charAt(0) === "[" || h.indexOf(".") > 0)) return bad;
+  return {text:u.href};
+}
+
+/* --- Bitcoin address checks: base58check (1…, 3…) and bech32 / bech32m (bc1…), all offline --- */
+var SHA256_K = [
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function sha256(msg){
+  var H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  var len = msg.length, n = ((len + 9 + 63) >> 6) << 6;
+  var p = new Uint8Array(n); p.set(msg); p[len] = 0x80;
+  var dv = new DataView(p.buffer);
+  dv.setUint32(n - 8, Math.floor(len / 0x20000000)); dv.setUint32(n - 4, (len << 3) >>> 0);
+  var w = new Int32Array(64), i, a, b, c, d, e, f, g, h, t1, t2;
+  function rotr(x, k){ return (x >>> k) | (x << (32 - k)); }
+  for (var off = 0; off < n; off += 64){
+    for (i = 0; i < 16; i++) w[i] = dv.getInt32(off + i*4);
+    for (i = 16; i < 64; i++){
+      var x = w[i-15], y = w[i-2];
+      w[i] = (w[i-16] + (rotr(x,7) ^ rotr(x,18) ^ (x >>> 3)) + w[i-7] + (rotr(y,17) ^ rotr(y,19) ^ (y >>> 10))) | 0;
+    }
+    a = H[0]; b = H[1]; c = H[2]; d = H[3]; e = H[4]; f = H[5]; g = H[6]; h = H[7];
+    for (i = 0; i < 64; i++){
+      t1 = (h + (rotr(e,6) ^ rotr(e,11) ^ rotr(e,25)) + ((e & f) ^ (~e & g)) + SHA256_K[i] + w[i]) | 0;
+      t2 = ((rotr(a,2) ^ rotr(a,13) ^ rotr(a,22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H[0] = (H[0]+a)|0; H[1] = (H[1]+b)|0; H[2] = (H[2]+c)|0; H[3] = (H[3]+d)|0;
+    H[4] = (H[4]+e)|0; H[5] = (H[5]+f)|0; H[6] = (H[6]+g)|0; H[7] = (H[7]+h)|0;
+  }
+  var out = new Uint8Array(32), ov = new DataView(out.buffer);
+  for (i = 0; i < 8; i++) ov.setUint32(i*4, H[i] >>> 0);
+  return out;
+}
+var B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+// the version byte of a valid base58check address, or -1
+function b58checkVersion(s){
+  var out = [], i, j, carry;                          // little-endian while accumulating
+  for (i = 0; i < s.length; i++){
+    carry = B58.indexOf(s.charAt(i));
+    if (carry < 0) return -1;
+    for (j = 0; j < out.length; j++){ carry += out[j] * 58; out[j] = carry & 255; carry >>= 8; }
+    while (carry){ out.push(carry & 255); carry >>= 8; }
+  }
+  for (i = 0; i < s.length && s.charAt(i) === "1"; i++) out.push(0);
+  out.reverse();
+  if (out.length !== 25) return -1;
+  var u = new Uint8Array(out), sum = sha256(sha256(u.subarray(0, 21)));
+  for (i = 0; i < 4; i++) if (sum[i] !== u[21 + i]) return -1;
+  return u[0];
+}
+var BECH32 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+function bech32Polymod(v){
+  var GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3], chk = 1;
+  for (var i = 0; i < v.length; i++){
+    var top = chk >>> 25;
+    chk = ((chk & 0x1ffffff) << 5) ^ v[i];
+    for (var k = 0; k < 5; k++) if ((top >>> k) & 1) chk ^= GEN[k];
+  }
+  return chk >>> 0;
+}
+// BIP 173 / BIP 350 segwit address → {hrp, version} or null
+function segwitDecode(s){
+  if (s !== s.toLowerCase() && s !== s.toUpperCase()) return null;   // mixed case is invalid
+  s = s.toLowerCase();
+  var pos = s.lastIndexOf("1");
+  if (pos < 1 || pos + 7 > s.length || s.length > 90) return null;
+  var hrp = s.slice(0, pos), data = [], i;
+  for (i = 0; i < hrp.length; i++){ var cc = hrp.charCodeAt(i); if (cc < 33 || cc > 126) return null; }
+  for (i = pos + 1; i < s.length; i++){ var d = BECH32.indexOf(s.charAt(i)); if (d < 0) return null; data.push(d); }
+  var exp = [];
+  for (i = 0; i < hrp.length; i++) exp.push(hrp.charCodeAt(i) >> 5);
+  exp.push(0);
+  for (i = 0; i < hrp.length; i++) exp.push(hrp.charCodeAt(i) & 31);
+  var pm = bech32Polymod(exp.concat(data));
+  var enc = pm === 1 ? "bech32" : pm === 0x2bc830a3 ? "bech32m" : null;
+  if (!enc || data.length < 7) return null;
+  var ver = data[0];
+  if (ver > 16) return null;
+  // regroup the 5-bit words (minus version and checksum) into bytes; padding must be zero and < 5 bits
+  var acc = 0, bits = 0, prog = [];
+  for (i = 1; i < data.length - 6; i++){
+    acc = ((acc << 5) | data[i]) & 0xfff; bits += 5;
+    if (bits >= 8){ bits -= 8; prog.push((acc >> bits) & 255); }
+  }
+  if (bits >= 5 || ((acc << (8 - bits)) & 255)) return null;
+  if (prog.length < 2 || prog.length > 40) return null;
+  if (ver === 0 && prog.length !== 20 && prog.length !== 32) return null;
+  if ((ver === 0) !== (enc === "bech32")) return null;              // v0 is bech32, v1+ is bech32m
+  return {hrp:hrp, version:ver};
+}
+// {addr} with the address as it belongs in the URI, or {err}
+function checkBtcAddress(a){
+  var typo = {err:"That isn't a valid Bitcoin address — check it for a typo."};
+  var testnet = {err:"That's a testnet address. Use a mainnet Bitcoin address."};
+  if (a.length > 90) return typo;
+  var sw = /^[a-z0-9]+1/i.test(a) ? segwitDecode(a) : null;
+  if (sw) return sw.hrp === "bc" ? {addr:a.toLowerCase()} : (sw.hrp === "tb" || sw.hrp === "bcrt") ? testnet : typo;
+  var v = b58checkVersion(a);
+  if (v === 0x00 || v === 0x05) return {addr:a};
+  if (v === 0x6f || v === 0xc4) return testnet;
+  return typo;
+}
+var MAX_SATS = BigInt("2100000000000000");
+// the amount field as {sats: BigInt}, {} when blank, or {err}
+function parseSats(v, unit){
+  v = v.trim();
+  if (!v) return {};
+  var s;
+  if (unit === "sat"){
+    v = v.replace(/[\s,_]/g, "");
+    if (!/^\d+$/.test(v)) return {err:"Sats are whole numbers, like 25000."};
+    s = BigInt(v);
+  } else {
+    if (v.indexOf(",") > -1) return {err:"Use a dot for decimals, like 0.0025 BTC."};
+    var m = /^(\d*)(?:\.(\d*))?$/.exec(v);
+    if (!m || (!m[1] && !m[2])) return {err:"Enter the amount as a number, like 0.0025."};
+    if ((m[2] || "").length > 8) return {err:"BTC has at most 8 decimal places (1 sat = 0.00000001 BTC)."};
+    s = BigInt((m[1] || "0") + (m[2] || "").padEnd(8, "0"));
+  }
+  if (s <= BigInt(0)) return {err:"The amount has to be more than zero."};
+  if (s > MAX_SATS) return {err:"That's more bitcoin than will ever exist."};
+  return {sats:s};
+}
+// BIP 21 amounts are decimal BTC, written without float rounding
+function satsToBtc(s){
+  var d = s.toString().padStart(9, "0"), whole = d.slice(0, -8), frac = d.slice(-8).replace(/0+$/, "");
+  return frac ? whole + "." + frac : whole;
+}
+
+/* --- coordinates and dates --- */
+function coordText(v, max, name){
+  var m = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(v.trim());
+  if (!m || (!m[2] && !m[3])) return {err:name + " must be a number in decimal degrees, like " + (max === 90 ? "45.6186" : "-61.9930") + "."};
+  var n = Number(v.trim());
+  if (!(Math.abs(n) <= max)) return {err:name + " must be between -" + max + " and " + max + "."};
+  var s = (m[2] || "0").replace(/^0+(?=\d)/, "") + (m[3] ? "." + m[3] : "");
+  return {text:(m[1] === "-" && n !== 0 ? "-" : "") + s};
+}
+// "YYYY-MM-DDTHH:MM[:SS]" from a datetime-local box → a Date in this device's time zone
+function parseLocal(v){
+  var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?$/.exec(v);
+  if (!m || +m[1] < 1000) return null;
+  var d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6] || 0));
+  return isNaN(d.getTime()) || d.getDate() !== +m[3] ? null : d;
+}
+function icsUtc(d){
+  return d.getUTCFullYear() + pad2(d.getUTCMonth()+1) + pad2(d.getUTCDate()) + "T" +
+         pad2(d.getUTCHours()) + pad2(d.getUTCMinutes()) + pad2(d.getUTCSeconds()) + "Z";
+}
+// "YYYY-MM-DD" (+ days) → "YYYYMMDD", done in UTC so no DST shift can move the day
+function icsDate(v, plus){
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m || +m[1] < 1000) return null;
+  var d = new Date(Date.UTC(+m[1], +m[2]-1, +m[3] + (plus || 0)));
+  if (d.getUTCFullYear() > 9999) return null;
+  return d.getUTCFullYear() + pad2(d.getUTCMonth()+1) + pad2(d.getUTCDate());
+}
+
+var QKINDS = {
+  url: {
+    what:"website link", format:"standard web link",
+    ready:"Ready. Any phone camera will offer to open this link.",
+    build:function(){
+      var r = normUrl(qv("q-url"));
+      return r.text || r.err ? r : {need:"Enter a web address."};
+    }
+  },
+  vcard: {
+    what:"contact card", format:"vCard 3.0",
+    ready:"Ready. A phone camera will offer to add this contact.",
+    build:function(){
+      var first = qt("q-vc-first"), last = qt("q-vc-last"), phone = qt("q-vc-phone"), email = qt("q-vc-email"),
+          org = qt("q-vc-org"), title = qt("q-vc-title"), web = qt("q-vc-url"), note = qt("q-vc-note");
+      if (!first && !last) return {need:"Enter a first or last name."};
+      var L = ["BEGIN:VCARD", "VERSION:3.0",
+               "N:" + txtEsc(last) + ";" + txtEsc(first) + ";;;",
+               "FN:" + txtEsc(first && last ? first + " " + last : first || last)];
+      if (org) L.push("ORG:" + txtEsc(org));
+      if (title) L.push("TITLE:" + txtEsc(title));
+      if (phone){
+        if (!/^\+?[0-9 ().\-]+$/.test(phone) || phone.replace(/\D/g, "").length < 3)
+          return {err:"A phone number can only use digits, spaces and + ( ) - ."};
+        L.push("TEL;TYPE=CELL:" + phone);
+      }
+      if (email){
+        if (!/^[^\s@;,]+@[^\s@;,]+\.[^\s@;,]+$/.test(email)) return {err:"That email address doesn't look right."};
+        L.push("EMAIL;TYPE=INTERNET:" + txtEsc(email));
+      }
+      if (web){
+        var u = normUrl(web);
+        if (u.err) return {err:"Website: " + u.err};
+        L.push("URL:" + u.text);
+      }
+      if (note) L.push("NOTE:" + txtEsc(note));
+      L.push("END:VCARD");
+      return {text:L.join("\r\n")};
+    }
+  },
+  wifi: {
+    what:"Wi-Fi network", format:"standard Wi-Fi code",
+    ready:"Ready. A phone camera will offer to join this network.",
+    build:function(){
+      var ssid = qv("q-wf-ssid"), sec = qv("q-wf-sec"), pass = qv("q-wf-pass");
+      if (!ssid.trim()) return {need:"Enter the network name."};
+      if (utf8Len(ssid) > 32) return {err:"A network name is at most 32 bytes long."};
+      if (sec === "WPA"){
+        if (!pass) return {need:"Enter the Wi-Fi password."};
+        if (!/^[\x20-\x7e]{8,63}$/.test(pass) && !/^[0-9a-fA-F]{64}$/.test(pass))
+          return {err:"A WPA password is 8 to 63 characters: letters, digits, spaces and symbols, without accents."};
+      } else if (sec === "WEP"){
+        if (!pass) return {need:"Enter the WEP key."};
+        if (!/^(?:[\x20-\x7e]{5}|[\x20-\x7e]{13}|[0-9a-fA-F]{10}|[0-9a-fA-F]{26})$/.test(pass))
+          return {err:"A WEP key is 5 or 13 characters, or 10 or 26 hex digits."};
+      }
+      return {text:"WIFI:T:" + sec + ";S:" + wifiEsc(ssid) + ";" +
+                   (sec === "nopass" ? "" : "P:" + wifiEsc(pass) + ";") +
+                   ($("q-wf-hidden").checked ? "H:true;" : "") + ";"};
+    }
+  },
+  geo: {
+    what:"map location", format:"geo: location",
+    ready:"Ready. Android phones open this spot in a maps app; an iPhone camera may only show the coordinates.",
+    build:function(){
+      var la = qt("q-geo-lat"), lo = qt("q-geo-lng");
+      if (!la || !lo) return {need:"Enter both latitude and longitude."};
+      var a = coordText(la, 90, "Latitude"); if (a.err) return a;
+      var b = coordText(lo, 180, "Longitude"); if (b.err) return b;
+      return {text:"geo:" + a.text + "," + b.text};
+    }
+  },
+  event: {
+    what:"calendar event", format:"iCalendar event",
+    ready:"Ready. A phone camera will offer to add this event to the calendar.",
+    build:function(){
+      var title = qt("q-ev-title"), loc = qt("q-ev-loc"), desc = qt("q-ev-desc"), start, end;
+      if (!title) return {need:"Enter a title for the event."};
+      if ($("q-ev-allday").checked){
+        var sd = qv("q-ev-sday"), ed = qv("q-ev-eday") || sd;
+        if (!sd) return {need:"Choose the first day."};
+        start = icsDate(sd, 0); end = icsDate(ed, 1);        // DTEND is exclusive: the day after the last
+        if (!start || !end) return {err:"Enter a valid date."};
+        if (ed < sd) return {err:"The last day can't be before the first."};
+        start = "DTSTART;VALUE=DATE:" + start; end = "DTEND;VALUE=DATE:" + end;
+      } else {
+        var sv = qv("q-ev-start"), ev = qv("q-ev-end");
+        if (!sv) return {need:"Choose when it starts."};
+        var s = parseLocal(sv), e = ev ? parseLocal(ev) : (s && new Date(s.getTime() + 3600000));
+        if (!s || !e) return {err:"Enter a valid date and time."};
+        if (e <= s) return {err:"The event has to end after it starts."};
+        if (e.getUTCFullYear() > 9999) return {err:"Enter a valid date and time."};
+        start = "DTSTART:" + icsUtc(s); end = "DTEND:" + icsUtc(e);
+      }
+      var L = ["BEGIN:VEVENT", "SUMMARY:" + txtEsc(title), start, end];
+      if (loc) L.push("LOCATION:" + txtEsc(loc));
+      if (desc) L.push("DESCRIPTION:" + txtEsc(desc));
+      L.push("END:VEVENT");
+      return {text:L.join("\r\n")};
+    }
+  },
+  btc: {
+    what:"Bitcoin address", format:"BIP 21 payment link",
+    ready:"Ready. Scanning opens a Bitcoin wallet with this address filled in.",
+    build:function(){
+      var a = qt("q-btc-addr");
+      if (!a) return {need:"Enter a Bitcoin address."};
+      if (/^bitcoin:/i.test(a)) return {err:"Enter just the address, without “bitcoin:” in front."};
+      var ok = checkBtcAddress(a);
+      if (ok.err) return ok;
+      var amt = parseSats(qv("q-btc-amt"), qv("q-btc-unit"));
+      if (amt.err) return amt;
+      return {text:"bitcoin:" + ok.addr + (amt.sats ? "?amount=" + satsToBtc(amt.sats) : "")};
+    }
+  }
+};
+
+function loadStructured(){
+  var r = QKINDS[qKind].build(), st = settings();
+  if (!r.text){
+    clearPayload();
+    var el = $("send-status"); el.className = r.err ? "status bad" : "status"; setText(el, r.err || r.need || "");
+    return;
+  }
+  try { encodeAt(r.text, ECCMAP[st.ecc], 40); }       // the largest code there is
+  catch(e){
+    clearPayload();
+    fail("That's too much for one QR code. Shorten it" +
+         (st.ecc !== "L" ? ", or choose a lower error correction under Code density." : "."));
+    return;
+  }
+  S.text = r.text;
+  showRaw(r.text, 40, qKind);
+}
+
+$("qtypes").addEventListener("click", function(e){
+  var b = e.target.closest ? e.target.closest("button[data-kind]") : null;
+  if (!b) return;
+  qKind = qKind === b.dataset.kind ? null : b.dataset.kind;   // pressing the lit one goes back to text
+  if (textTimer){ clearTimeout(textTimer); textTimer = null; }
+  showTextUI();
+  clearPayload();
+  if (qKind){ focusTextInput(); loadText(); }
+  else if ($("text-input").value) loadText();
+});
+function queueStructured(){
+  if (textTimer) clearTimeout(textTimer);
+  textTimer = setTimeout(loadText, 300);
+}
+$("qforms").addEventListener("input", queueStructured);
+$("qforms").addEventListener("change", queueStructured);
+$("q-wf-sec").addEventListener("change", function(){
+  $("q-wf-pass-field").hidden = $("q-wf-sec").value === "nopass";
+});
+$("q-ev-allday").addEventListener("change", function(){
+  var on = $("q-ev-allday").checked;
+  $("q-ev-times").hidden = on; $("q-ev-days").hidden = !on;
+  if (on){                                              // carry dates already picked across
+    if (!$("q-ev-sday").value && $("q-ev-start").value) $("q-ev-sday").value = $("q-ev-start").value.slice(0, 10);
+    if (!$("q-ev-eday").value && $("q-ev-end").value) $("q-ev-eday").value = $("q-ev-end").value.slice(0, 10);
+  }
+});
+["q-geo-lat", "q-geo-lng"].forEach(function(id){
+  $(id).addEventListener("input", function(){          // "45.6186, -61.9930" pasted into either box
+    var m = /^\s*([+-]?\d*\.\d+)\s*,\s*([+-]?\d*\.\d+)\s*$/.exec($(id).value);
+    if (m){ $("q-geo-lat").value = m[1]; $("q-geo-lng").value = m[2]; }
+  });
+});
+$("q-btc-unit").addEventListener("change", function(){
+  var now = $("q-btc-unit").value;                     // two units, so the old one is the other one
+  var r = parseSats(qv("q-btc-amt"), now === "sat" ? "btc" : "sat");
+  if (r.sats) $("q-btc-amt").value = now === "sat" ? r.sats.toString() : satsToBtc(r.sats);
+});
+(function(){
+  var tz = "";
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch(e){}
+  setText($("q-ev-tz"), "Times are in this device's time zone" + (tz ? " (" + tz + ")" : "") +
+    " and stored as UTC, so the event lands at the right moment wherever it's scanned.");
+})();
 
 $("lossy-toggle").addEventListener("click", function(){ S.lossy.on = !S.lossy.on; applyLossy(); });
 var pctTimer = null;
@@ -1969,10 +2503,10 @@ $("sheet").addEventListener("click", function(){ $("next").click(); });
 $("preset").addEventListener("change", function(){
   var p = $("preset").value.split(",");
   $("ecc").value = p[1];
-  if (textMode && S.text) loadText(); else { buildCodes(); readout(); }
+  if (textMode && (S.text || qKind)) loadText(); else { buildCodes(); readout(); }
 });
 $("ecc").addEventListener("change", function(){
-  if (textMode && S.text) loadText(); else { buildCodes(); readout(); }
+  if (textMode && (S.text || qKind)) loadText(); else { buildCodes(); readout(); }
 });
 document.addEventListener("keydown", function(e){
   if (mode() !== "send") return;
@@ -2558,7 +3092,7 @@ function printGrid(){
   return [c,r];
 }
 function printFilename(){
-  return S.name || "text snippet";
+  return S.name || (S.raw && S.kind ? QKINDS[S.kind].what : "text snippet");
 }
 /* The default note, and what the next press of the button would actually produce. Called
    whenever the code set changes so the sheet count can never describe a stale payload.   */
@@ -2658,7 +3192,7 @@ function buildPrintDom(){
       cell.className = "pcell";
       var qr = document.createElement("div");
       qr.className = "pqr";
-      qr.innerHTML = svgFor(codes[i], ecc, st.ver, 4);
+      qr.innerHTML = svgFor(codes[i], ecc, codeVer(), 4);
       var num = document.createElement("div");
       num.className = "pnum";
       num.textContent = String(i+1);
