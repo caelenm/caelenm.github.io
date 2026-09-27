@@ -15,7 +15,7 @@
     Editing either <script> body invalidates its hash; recompute with the build
     step documented in the provenance comment near the app script.
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; script-src &#39;self&#39; &#39;sha256-ICmTDSgHvTs31dRxgZS3fdCGun1CChgXbL3GFpYMnrI=&#39; &#39;sha256-TBmcOqgbvQAGaA/MX5V2bh4pGpV1yGY9MHYhJ41r0l4=&#39;; style-src &#39;self&#39; &#39;unsafe-inline&#39;; img-src &#39;self&#39; data:; base-uri &#39;none&#39;; form-action &#39;none&#39;; frame-ancestors &#39;none&#39;">
+  <meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; script-src &#39;self&#39; &#39;sha256-ICmTDSgHvTs31dRxgZS3fdCGun1CChgXbL3GFpYMnrI=&#39; &#39;sha256-sKDrEWy4Bi8Xsr+546hkVvFIjQWx7Ua4E5vqJpDjY5A=&#39;; style-src &#39;self&#39; &#39;unsafe-inline&#39;; img-src &#39;self&#39; data:; base-uri &#39;none&#39;; form-action &#39;none&#39;; frame-ancestors &#39;none&#39;">
   <title>VaultSend</title>
   <style>
     /* ─── Design tokens — VaultSend "shield navy" / Material-3 aligned ─── */
@@ -1477,7 +1477,9 @@
     // memory regardless of the file. Only the fallback can run out of room, and
     // the limit there is storage quota, which the browser will tell us. If it
     // declines to, attempt the operation rather than refuse on a guess.
-    if (sink.kind === "needsgesture") return { needsGesture: true };
+    // A picker that refused for lack of a gesture ("needsgesture") also lands
+    // here: bailing out would leave the original file loaded, so Download would
+    // hand back the unencrypted input instead of the .age result.
     const headroom = await storageHeadroom();
     if (headroom !== null && total > headroom) {
       return { tooBig: true, need: total, have: headroom };
