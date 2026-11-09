@@ -1,7 +1,7 @@
 {
   "tag": "payRequest",
   "commentAllowed": 255,
-  "callback": "https://arkade.money/.well-known/lnurlp/lucky-comet/callback",
+  "callback": "https://noahwallet.io/.well-known/lnurlp/cjm",
   "minSendable": 1000,
   "maxSendable": 10000000000,
   "metadata": "[[\"text/identifier\",\"ark@caelen.ca\"],[\"text/plain\",\"caelen.ca\"]]",
