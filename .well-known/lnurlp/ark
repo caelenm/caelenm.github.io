@@ -1,8 +1,8 @@
 {
   "tag": "payRequest",
   "commentAllowed": 255,
-  "callback": "https://noahwallet.io/.well-known/lnurlp/cjm",
-  "minSendable": 1000,
+  "callback": "https://coinos.io/.well-known/lnurlp/cjm",
+  "minSendable": 1,
   "maxSendable": 10000000000,
   "metadata": "[[\"text/identifier\",\"ark@caelen.ca\"],[\"text/plain\",\"caelen.ca\"]]",
   "payerData": {
