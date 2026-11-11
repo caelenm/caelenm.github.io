@@ -1,19 +1,8 @@
 {
   "tag": "payRequest",
-  "commentAllowed": 255,
-  "callback": "https://coinos.io/.well-known/lnurlp/cjm",
+  "callback": "https://names.coinos.io/lnurlp/cjm/cb?domain=coinos.io",
   "minSendable": 1000,
   "maxSendable": 10000000000,
-  "metadata": "[[\"text/identifier\",\"pay@caelen.ca\"],[\"text/plain\",\"caelen.ca\"]]",
-  "payerData": {
-    "name": {
-      "mandatory": false
-    },
-    "email": {
-      "mandatory": false
-    },
-    "pubkey": {
-      "mandatory": false
-    }
-  }
+  "metadata": "[[\"text/plain\",\"Paying cjm@coinos.io\"],[\"text/identifier\",\"cjm@coinos.io\"]]",
+  "commentAllowed": 255
 }
