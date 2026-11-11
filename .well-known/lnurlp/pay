@@ -1,1 +1,8 @@
-{"tag":"payRequest","callback":"https://names.coinos.io/lnurlp/cjm/cb?domain=coinos.io","minSendable":1000,"maxSendable":500000000,"metadata":"[[\"text/plain\",\"Paying cjm@coinos.io\"],[\"text/identifier\",\"cjm@coinos.io\"]]","commentAllowed":200,"allowsNostr":true,"nostrPubkey":"e0c0ab7eb126bd4bd7168219c3dd195eb5ad92b7d7807ed2dda57f69c7c5d20d"}
+{
+  "tag": "payRequest",
+  "callback": "https://names.coinos.io/lnurlp/cjm/cb?domain=coinos.io",
+  "minSendable": 1000,
+  "maxSendable": 500000000,
+  "metadata": "[[\"text/plain\",\"Paying cjm@coinos.io\"],[\"text/identifier\",\"cjm@coinos.io\"]]",
+  "commentAllowed": 200
+}
