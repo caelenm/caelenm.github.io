@@ -1,7 +1,7 @@
 {
   "tag": "payRequest",
   "commentAllowed": 255,
-  "callback": "https://lnurl.caelenm.deno.net/lnurlp/pay/AhGvmEGKFtN0jIR4bxXFKO3zEZB5Hfp0ty1i7JDu-BsZYzpNJ6Il2u1RCJOtdsTRA4v-RXRP_v1VztwuyEszr5AuJQgAFco_OZos4NQKA8XhprGDMS3-c99EAJrENiNkoa8_oCRdyupKXGFWscbBg8pBlz2octkq09cA/callback",
+  "callback": "https://lnurl.x2021bix.workers.dev/lnurlp/pay/AhGvmEFv1HaBtgIfx4cglg27OIM2RmAUiJ8t9kdazt6NqMZik3p774rCE0BUuj3iDsEBhQ9iSF4ROQQ_DLaCnVaiWzVkm5jgl5LCld59K3EP6gchd_P3Lz6jpi2D2MwvdCdWIDc1iTCj77WbE2pOTKDH8rf54PyMqjbd/callback",
   "minSendable": 1000,
   "maxSendable": 10000000000,
   "metadata": "[[\"text/identifier\",\"pay@caelen.ca\"],[\"text/plain\",\"Sats for pay\"]]",
