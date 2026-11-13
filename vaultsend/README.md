@@ -9,7 +9,7 @@ VaultSend is interoperable with the `age` and [`rage`](https://github.com/str4d/
 command-line tools and the desktop app: anything you encrypt here can be
 decrypted there, and vice versa.
 
-> **Status:** v1.3.0 · self-contained web build · MIT-licensed dependencies
+> **Status:** v1.4.0 · self-contained web build · MIT-licensed dependencies
 
 ---
 
@@ -33,7 +33,12 @@ You can literally save the file, unplug from the network, and it still works.
   (scrypt) before it is ever stored.
 - **Encrypt text or files** to one or more recipients. You are always added as a
   recipient so you can read your own messages back.
-- **Decrypt** age files and ASCII-armored age messages.
+- **Decrypt** age files and ASCII-armored age messages, made for your key or
+  with a password.
+- **Open what someone shared from a vault** in the desktop or Android app: a
+  `Name.tar.age` shows the files and folders it holds, to save one at a time,
+  all into a new folder, or as the `.tar` it is. See
+  [Files shared from a vault](#files-shared-from-a-vault).
 - **Drag & drop** files; drop a folder and it is zipped first.
 - **Contacts** — save people's public keys with names; import/export as JSON.
 - **Portable identity** — export/import a passphrase-protected `identity.age`.
@@ -52,6 +57,7 @@ The page ships a strict Content-Security-Policy:
 ```
 default-src 'none'; script-src 'sha256-…' 'sha256-…';
 style-src 'self' 'unsafe-inline'; img-src 'self' data:;
+manifest-src 'self'; worker-src 'self';
 base-uri 'none'; form-action 'none'
 ```
 
@@ -66,6 +72,35 @@ another site from framing it. If you host a copy, send
 
 After editing either inline script, re-pin its hash with `python3 update-csp.py`
 (`--check` only reports whether the pins are current).
+
+### Installing it as an app
+
+`index.html` on its own is the whole tool, and opened from disk (`file://`) it
+stays exactly that: browsers only offer to install a page served over `https`.
+
+A hosted copy can be installed (Chrome, Edge and Android: the install button in
+the address bar or menu; iOS and macOS Safari: Share → Add to Home Screen / Add
+to Dock). For that, host these beside `index.html`:
+
+| File | Purpose |
+|------|---------|
+| `manifest.webmanifest` | Name, colours and icons of the installed app. |
+| `icons/` | The app icon, 192 and 512 px. |
+| `sw.js` | Service worker: keeps a copy of these files so the app opens offline. |
+
+What this changes in the security model, and what it doesn't:
+
+- The CSP gains `manifest-src 'self'` and `worker-src 'self'`. `script-src` is
+  unchanged: page scripts still run only by pinned hash.
+- `sw.js` is the one script not pinned by hash (a service worker can't be
+  inline). It runs in its own context, sees no keys, text or files, and only
+  re-fetches VaultSend's own files from its own origin (network first, kept
+  copy when offline). It can decide which copy of `index.html` the browser
+  gets, as the host already can, but not what that copy is allowed to run.
+- The page itself still makes no network requests.
+
+If you'd rather not have a service worker, don't host `sw.js`: everything else
+works, and the app just won't open offline when installed.
 
 ### Pinned, auditable code
 
@@ -84,6 +119,49 @@ same way. Nothing can be swapped in by a CDN, a cache, or an injection.
   - **locks shortly after the browser tab is hidden** and wipes on unload;
   - offers a **"don't remember"** option to re-ask every time;
   - can be locked instantly from **Menu → Lock session now**.
+
+### Files shared from a vault
+
+The desktop and Android apps keep **vaults**: encrypted folders that change one
+file at a time. Their **Share…** hands part of a vault to someone else as an
+ordinary age file, encrypted to that person's key or to a password. One file
+stays that file (`photo.jpg.age`); a folder or several items travel as a tar
+archive inside it (`Holiday.tar.age`).
+
+The web build opens those files, and has no vaults of its own:
+
+- **Decrypt** reads the file's header to see which it needs. A file made with a
+  password asks for that password, checks it at once and asks again if it is
+  wrong; any other uses your key. The password is used for that one file and
+  never kept.
+- **An archive** is decrypted and authenticated in full before any of it is
+  read, then listed. Nothing is saved until you choose: **Save** on one file,
+  **Save all to a folder…** (a new folder inside one you pick, never over an
+  existing name; in browsers without that, **Download as .zip**), or **Save as
+  .tar**. Closing the list drops the decrypted copy.
+- **No key is needed for a password.** On the welcome page, **Open it without
+  a key** (or just dropping the file there) goes straight to Decrypt. Nothing
+  is created or stored. Encrypting, and files made for a key, still need yours.
+- **A shared archive is read as hostile**, by the same rules as the apps'
+  reader: age has authenticated it, but only as coming from whoever knew the
+  password. Names that could leave the folder (`..`, absolute paths, drive
+  prefixes, backslashes, NUL) are refused; links, devices and FIFOs are skipped
+  and never created; at most 100,000 entries and 32 GB, and every declared size
+  is checked against the file. An archive that fails any of this shows nothing
+  and saves nothing. `node tests/shared_archive_test.mjs` runs these rules
+  against the reader inside `index.html`.
+- **A password file may ask for scrypt up to 2^18**, what VaultSend and the
+  `age` tool make, and one asking for more is refused before any work is done.
+- **A vault itself can't be imported.** Dropping a `.vsvault` folder (or its
+  `VAULT` file) says so: importing vaults is not supported on the web, and the
+  desktop or mobile versions are the place for it. A vault that arrives as a
+  `.zip` is recognised too, by what the zip holds rather than its name, before
+  Decrypt asks for any key.
+
+What a page can't do that the apps can: build the unpacked folder somewhere
+private and rename it into place. Here the archive is verified and checked in
+full first, and if writing then fails or is cancelled, the new folder is removed
+again.
 
 ### Threat model — what VaultSend does and doesn't protect
 
@@ -188,6 +266,11 @@ what is and isn't proven by a reproducible build.
    checked recipients (plus yourself) can decrypt.
 5. **Decrypt** — paste an armored message or drop an `.age` file and unlock with
    your passphrase.
+6. **Open a share** — drop the `.age` file someone shared from their vault and
+   click **Decrypt**. Enter the password they gave you, or your passphrase if it
+   was made for your key. With only a password you don't need a key of your
+   own: choose **Open it without a key** on the welcome page. An archive (`Name.tar.age`) lists what it holds;
+   choose what to save.
 
 > **"This was not encrypted to you"?** That means your key wasn't among the
 > file's recipients. Re-encrypt with the recipient's contact ticked, and confirm
@@ -202,7 +285,9 @@ what is and isn't proven by a reproducible build.
 |------|---------|
 | `index.html` | The application — open this. |
 | `verify.sh`              | Reproducible-build verifier. |
+| `manifest.webmanifest`, `icons/`, `sw.js` | Make a hosted copy installable as an app (optional). |
 | `update-csp.py`          | Re-pins the CSP script hashes after an edit. |
+| `tests/shared_archive_test.mjs` | Tests the shared-archive reader inside `index.html` (Node only). |
 | `LICENSE`                | GPL-3.0 license text. |
 | `PROVENANCE.md`          | Pinned versions and what reproducibility proves. |
 | `SECURITY.md`            | Session-lock model and operational notes. |
