@@ -3,9 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<!-- Fully offline: no origin other than the page itself is reachable. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src blob:; child-src blob:; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<!-- Fully offline: no origin other than the page itself is reachable. The page makes no requests
+     (connect-src 'none'). manifest-src, worker-src 'self' and img-src 'self' only let a hosted copy
+     load its own manifest.webmanifest, sw.js and icons, so it can be installed as an app. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src blob: 'self'; child-src blob:; style-src 'unsafe-inline'; img-src 'self' data: blob:; media-src blob:; manifest-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
 <title>QR SneakerNet</title><meta name="application-name" content="QR SneakerNet"><meta name="theme-color" content="#0D0F14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
 :root{
   --ink:#0D0F14; --panel:#151922; --panel2:#1C212C; --line:#2B3240; --line2:#3A4356;
@@ -3253,6 +3258,13 @@ $("print-instr").addEventListener("change", printNote);
 paintBoot();
 paintRecv();
 if (location.hash.toLowerCase().indexOf("receive") > -1) show("recv");
+
+/* Installable app (hosted copies only). Over https (or localhost) the page can be installed;
+   the service worker keeps a copy of these files so the installed app opens with no
+   connection. Opened from disk there is nothing to install or register. */
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  navigator.serviceWorker.register("sw.js").catch(function(){});
+}
 })();
 </script>
 <div id="printroot" aria-hidden="true"></div>

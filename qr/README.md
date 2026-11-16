@@ -41,6 +41,7 @@ Both feed a binary search (`maxChars`) that determines exactly how many characte
 ## Design choices worth knowing about
 
 - **No network, ever.** The page's content-security policy blocks outbound requests entirely — this is a deliberate air-gap tool, not just an offline-capable one.
+- **Installable, still offline.** A hosted copy can be installed as an app (Chrome, Edge and Android: the install button in the address bar or menu; iPhone and iPad: Share → Add to Home Screen). `manifest.webmanifest` gives it a name, colours and icons, and `sw.js` keeps the last copy of the page and its icons so the installed app opens with no connection, fetching a newer copy first whenever one is reachable. The CSP gains only `manifest-src 'self'`, `worker-src 'self'` and `img-src 'self'` for those files; `connect-src` stays `'none'`, so the page itself still makes no requests. Opened from disk, none of this is used.
 - **Bit-exact by construction.** Every optional transformation (compression, image re-encoding, PDF flattening) either round-trips exactly or is skipped; the receiver's CRC32 check is the final word.
 - **Self-numbering chunks over strict ordering.** Nothing about the protocol assumes codes arrive in sequence, are shown once, or are all scanned in one sitting — which is what makes the missing-frames back-channel (and, as discussed below, a printed/paper version) possible without extra protocol changes.
 - **Text has a fast path.** A short text snippet that fits in a single code is sent as the raw text itself — no framing, no base44 — so it reads on literally any QR scanner, not just this page.
@@ -55,3 +56,11 @@ It's one HTML file. Structurally, inside it:
 - Markup and CSS for the two-tab (Send/Receive) interface.
 
 There is no build step and no dependency manager — the libraries are inlined by hand into the shipped file.
+
+Alongside it, only for installing a hosted copy as an app (optional — without them the page works exactly the same):
+
+| File | Purpose |
+|---|---|
+| `manifest.webmanifest` | Name, colours and icons of the installed app. |
+| `icons/` | 192 and 512 px app icons (the 512 doubles as the maskable icon). |
+| `sw.js` | Service worker: keeps a copy of these files so the app opens offline. |
